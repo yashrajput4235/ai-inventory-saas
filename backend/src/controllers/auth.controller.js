@@ -119,10 +119,16 @@ exports.verifyOtp = async (req, res) => {
       { expiresIn: "1d" }
     );
 
-    res.json({
-      message: "Account verified successfully",
-      token,
-    });
+    res.cookie("token", token, {
+  httpOnly: true,
+  secure: false, // true in production (HTTPS)
+  sameSite: "strict",
+  maxAge: 24 * 60 * 60 * 1000, // 1 day
+});
+
+res.json({
+  message: "Account verified successfully",
+});
 
   } catch (error) {
     console.error(error);

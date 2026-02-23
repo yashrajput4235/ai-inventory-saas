@@ -22,11 +22,140 @@ model User {
   password         String
   role             String   @default("manager")
   isVerified       Boolean  @default(false)
+
+  // 🔐 Auth Fields
   otp              String?
   otpExpiry        DateTime?
   otpAttempts      Int      @default(0)
   otpBlockedUntil  DateTime?
   resetToken       String?
   resetTokenExpiry DateTime?
+
+  // 🏢 Multi-tenant Field
+  organizationId   String
+  organization     Organization @relation(fields: [organizationId], references: [id])
+
+  // 🔗 Store Mapping
+  userStores       UserStore[]
+
   createdAt        DateTime @default(now())
 }
+
+model Organization {
+  id        String   @id @default(uuid())
+  name      String
+  createdAt DateTime @default(now())
+
+  stores    Store[]
+  users     User[]
+  products  Product[]
+}
+
+model Store {
+  id              String   @id @default(uuid())
+  name            String
+  location        String?
+  organizationId  String
+  createdAt       DateTime @default(now())
+
+  organization    Organization @relation(fields: [organizationId], references: [id])
+
+  inventory       Inventory[]
+  sales           Sale[]
+  transfersFrom   StockTransfer[] @relation("FromStore")
+  transfersTo     StockTransfer[] @relation("ToStore")
+
+  userStores      UserStore[]        // ✅ FIXED
+  predictions     Prediction[]       // ✅ FIXED
+}
+
+
+
+model UserStore {
+  id       String @id @default(uuid())
+  userId   String
+  storeId  String
+
+  user     User  @relation(fields: [userId], references: [id])
+  store    Store @relation(fields: [storeId], references: [id])
+
+  @@unique([userId, storeId])
+}
+
+model Product {
+  id              String   @id @default(uuid())
+  name            String
+  sku             String
+  category        String?
+  price           Float
+  cost            Float?
+  organizationId  String
+  createdAt       DateTime @default(now())
+
+  organization    Organization @relation(fields: [organizationId], references: [id])
+  inventory       Inventory[]
+  sales           Sale[]
+  predictions     Prediction[]
+}
+
+model Inventory {
+  id        String   @id @default(uuid())
+  storeId   String
+  productId String
+  quantity  Int      @default(0)
+  updatedAt DateTime @updatedAt
+
+  store     Store   @relation(fields: [storeId], references: [id])
+  product   Product @relation(fields: [productId], references: [id])
+
+  @@unique([storeId, productId])
+}
+
+model Sale {
+  id              String   @id @default(uuid())
+  organizationId  String
+  storeId         String
+  productId       String
+  quantity        Int
+  priceAtSale     Float
+  totalAmount     Float
+  costAtSale      Float?
+  profit          Float?
+  soldAt          DateTime
+  createdAt       DateTime @default(now())
+
+  store           Store   @relation(fields: [storeId], references: [id])
+  product         Product @relation(fields: [productId], references: [id])
+}
+
+model StockTransfer {
+  id              String   @id @default(uuid())
+  organizationId  String
+  fromStoreId     String
+  toStoreId       String
+  productId       String
+  quantity        Int
+  status          String   @default("pending")
+  requestedAt     DateTime @default(now())
+  completedAt     DateTime?
+
+  fromStore       Store   @relation("FromStore", fields: [fromStoreId], references: [id])
+  toStore         Store   @relation("ToStore", fields: [toStoreId], references: [id])
+}
+
+model Prediction {
+  id              String   @id @default(uuid())
+  organizationId  String
+  storeId         String
+  productId       String
+  predictedDemand Int
+  recommendedStock Int
+  predictionDate  DateTime
+  modelVersion    String
+  confidenceScore Float?
+  createdAt       DateTime @default(now())
+
+  store           Store   @relation(fields: [storeId], references: [id])
+  product         Product @relation(fields: [productId], references: [id])
+}
+

@@ -1,0 +1,111 @@
+const prisma = require("../config/prisma");
+
+exports.createSale = async (req, res) => {
+  try {
+    const { storeId, productId, quantity } = req.body;
+    const { userId, role, organizationId } = req.user;
+
+    if (quantity <= 0) {
+      return res.status(400).json({
+        message: "Quantity must be greater than 0",
+      });
+    }
+
+    // Check store belongs to organization
+    const store = await prisma.store.findFirst({
+      where: { id: storeId, organizationId },
+    });
+
+    if (!store) {
+      return res.status(404).json({
+        message: "Store not found in your organization",
+      });
+    }
+
+    // Manager store assignment check
+    if (role === "manager") {
+      const mapping = await prisma.userStore.findFirst({
+        where: { userId, storeId },
+      });
+
+      if (!mapping) {
+        return res.status(403).json({
+          message: "You are not assigned to this store",
+        });
+      }
+    }
+
+    // Check product belongs to organization
+    const product = await prisma.product.findFirst({
+      where: { id: productId, organizationId },
+    });
+
+    if (!product) {
+      return res.status(404).json({
+        message: "Product not found in your organization",
+      });
+    }
+
+    const result = await prisma.$transaction(async (tx) => {
+
+      const inventory = await tx.inventory.findUnique({
+        where: {
+          storeId_productId: {
+            storeId,
+            productId,
+          },
+        },
+      });
+
+      if (!inventory) {
+        throw new Error("Inventory not found for this product in store");
+      }
+
+      if (inventory.quantity < quantity) {
+        throw new Error("Insufficient stock");
+      }
+
+      // Deduct inventory
+      await tx.inventory.update({
+        where: { id: inventory.id },
+        data: {
+          quantity: inventory.quantity - quantity,
+        },
+      });
+
+      const priceAtSale = product.price;
+      const costAtSale = product.cost || 0;
+
+      const totalAmount = priceAtSale * quantity;
+      const profit = (priceAtSale - costAtSale) * quantity;
+
+      const sale = await tx.sale.create({
+        data: {
+          organizationId,
+          storeId,
+          productId,
+          quantity,
+          priceAtSale,
+          costAtSale,
+          totalAmount,
+          profit,
+          soldAt: new Date(),
+        },
+      });
+
+      return sale;
+    });
+
+    res.status(201).json({
+      message: "Sale recorded successfully",
+      sale: result,
+    });
+
+  } catch (error) {
+    console.error(error.message);
+
+    res.status(400).json({
+      message: error.message || "Failed to record sale",
+    });
+  }
+};

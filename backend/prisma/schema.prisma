@@ -49,6 +49,8 @@ model Organization {
   stores    Store[]
   users     User[]
   products  Product[]
+  sales     Sale[]      // ✅ ADD THIS
+  inventoryLedgers InventoryLedger[]
 }
 
 model Store {
@@ -65,8 +67,10 @@ model Store {
   transfersFrom   StockTransfer[] @relation("FromStore")
   transfersTo     StockTransfer[] @relation("ToStore")
 
-  userStores      UserStore[]        // ✅ FIXED
-  predictions     Prediction[]       // ✅ FIXED
+  userStores      UserStore[]
+  predictions     Prediction[]
+
+  inventoryLedgers InventoryLedger[]   // ✅ ADDED
 }
 
 
@@ -96,6 +100,9 @@ model Product {
   inventory       Inventory[]
   sales           Sale[]
   predictions     Prediction[]
+  inventoryLedgers InventoryLedger[]
+
+  @@unique([organizationId, sku])   // IMPORTANT
 }
 
 model Inventory {
@@ -113,19 +120,57 @@ model Inventory {
 
 model Sale {
   id              String   @id @default(uuid())
+
+  // 🔐 Multi-tenant boundary
   organizationId  String
+  organization    Organization @relation(fields: [organizationId], references: [id])
+
+  // 🏬 Store info
   storeId         String
+  store           Store   @relation(fields: [storeId], references: [id])
+
+  // 📦 Product info
   productId       String
+  product         Product @relation(fields: [productId], references: [id])
+
+  // 📊 Sale data
   quantity        Int
   priceAtSale     Float
-  totalAmount     Float
   costAtSale      Float?
+  totalAmount     Float
   profit          Float?
+
+  // 🕒 Timestamps
   soldAt          DateTime
   createdAt       DateTime @default(now())
 
-  store           Store   @relation(fields: [storeId], references: [id])
-  product         Product @relation(fields: [productId], references: [id])
+  @@index([organizationId])
+  @@index([storeId])
+  @@index([productId])
+}
+
+model InventoryLedger {
+  id              String   @id @default(uuid())
+
+  organizationId  String
+  storeId         String
+  productId       String
+
+  changeType      String   // STOCK_ADD, SALE, TRANSFER_IN, TRANSFER_OUT
+  quantityChange  Int      // signed (+ / -)
+  resultingQty    Int
+
+  referenceId     String?  // saleId / transferId
+  createdBy       String   // userId
+  createdAt       DateTime @default(now())
+
+  organization    Organization @relation(fields: [organizationId], references: [id])
+  store           Store        @relation(fields: [storeId], references: [id])
+  product         Product      @relation(fields: [productId], references: [id])
+
+  @@index([organizationId])
+  @@index([storeId])
+  @@index([productId])
 }
 
 model StockTransfer {

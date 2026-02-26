@@ -66,12 +66,73 @@ exports.createSale = async (req, res) => {
       }
 
       // Deduct inventory
-      await tx.inventory.update({
-        where: { id: inventory.id },
-        data: {
-          quantity: inventory.quantity - quantity,
-        },
-      });
+     const result = await prisma.$transaction(async (tx) => {
+
+  // 🔥 Atomic Decrement
+  const updatedInventory = await tx.inventory.updateMany({
+    where: {
+      storeId,
+      productId,
+      quantity: {
+        gte: quantity
+      }
+    },
+    data: {
+      quantity: {
+        decrement: quantity
+      }
+    }
+  });
+
+  if (updatedInventory.count === 0) {
+    throw new Error("Insufficient stock");
+  }
+
+  // Fetch updated quantity
+  const inventory = await tx.inventory.findUnique({
+    where: {
+      storeId_productId: {
+        storeId,
+        productId
+      }
+    }
+  });
+
+  const priceAtSale = product.price;
+  const costAtSale = product.cost || 0;
+  const totalAmount = priceAtSale * quantity;
+  const profit = (priceAtSale - costAtSale) * quantity;
+
+  const sale = await tx.sale.create({
+    data: {
+      organizationId,
+      storeId,
+      productId,
+      quantity,
+      priceAtSale,
+      costAtSale,
+      totalAmount,
+      profit,
+      soldAt: new Date(),
+    },
+  });
+
+  // 🔥 Ledger Entry
+  await tx.inventoryLedger.create({
+    data: {
+      organizationId,
+      storeId,
+      productId,
+      changeType: "SALE",
+      quantityChange: -quantity,  // negative
+      resultingQty: inventory.quantity,
+      referenceId: sale.id,
+      createdBy: userId,
+    },
+  });
+
+  return sale;
+});
 
       const priceAtSale = product.price;
       const costAtSale = product.cost || 0;

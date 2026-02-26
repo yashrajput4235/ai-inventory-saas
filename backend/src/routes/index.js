@@ -11,6 +11,8 @@ const productRoutes = require("./product.routes");
 const inventoryRoutes = require("./inventory.routes");
 const salesRoutes = require("./sales.routes");
 
+const analyticsRoutes = require("./analytics.routes");
+
 router.use("/auth", authRoutes);
 
 router.get("/dashboard", authMiddleware, (req, res) => {
@@ -29,6 +31,8 @@ router.use("/products", productRoutes);
 router.use("/sales", salesRoutes);
 
 router.use("/org", orgRoutes);
+
+router.use("/analytics", analyticsRoutes);
 
 router.get("/health", (req, res) => {
   res.json({ status: "OK" });

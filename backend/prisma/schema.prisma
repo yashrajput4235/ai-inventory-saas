@@ -101,6 +101,7 @@ model Product {
   sales           Sale[]
   predictions     Prediction[]
   inventoryLedgers InventoryLedger[]
+  
 
   @@unique([organizationId, sku])   // IMPORTANT
 }
@@ -110,6 +111,7 @@ model Inventory {
   storeId   String
   productId String
   quantity  Int      @default(0)
+  lowStockThreshold Int @default(10)
   updatedAt DateTime @updatedAt
 
   store     Store   @relation(fields: [storeId], references: [id])

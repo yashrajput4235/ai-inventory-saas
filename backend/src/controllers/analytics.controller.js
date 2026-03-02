@@ -200,3 +200,58 @@ exports.getTopProducts = async (req, res) => {
     });
   }
 };
+
+// low stock alert
+exports.getLowStockProducts=async(req, res)=>{
+  try{
+    const {storeId}=req.params;
+    const {userId, role, organizationId}=req.user;
+    // validate store
+    const store=await prisma.store.findFirst({
+      where:{id:storeId, organizationId},
+    });
+    if(!store){
+      return res.status(404).json({
+        message:"Store not found in you organization",
+      });
+    }
+    // manager scope check
+    if(role==="manager"){
+      const mapping=await prisma.userStore.findFirst({
+        where:{
+          userId,
+          storeId
+        },
+      });
+      if(!mapping){
+        return res.status(403).json({
+          message:"You are not assigned to this store",
+        });
+      }
+      
+    }
+    // find low stock items
+      const inventoryItems=await prisma.inventory.findMany({
+        where:{
+          storeId,
+        },
+        include:{
+          product:{
+            select:{
+              name:true,
+              sku:true,
+            },
+          },
+        },
+      });
+      
+      const lowStockItems = inventoryItems.filter(item => item.quantity <= item.lowStockThreshold);
+      res.json(lowStockItems);
+  }
+  catch(error){
+    console.error(error);
+    res.status(500).json({
+      message:"Failed to fetch low stock items",
+    });
+  }
+};

@@ -51,6 +51,7 @@ model Organization {
   products  Product[]
   sales     Sale[]      // ✅ ADD THIS
   inventoryLedgers InventoryLedger[]
+  predictions Prediction[]
 }
 
 model Store {
@@ -191,18 +192,23 @@ model StockTransfer {
 }
 
 model Prediction {
-  id              String   @id @default(uuid())
-  organizationId  String
-  storeId         String
-  productId       String
-  predictedDemand Int
+  id               String   @id @default(uuid())
+  organizationId   String
+  storeId          String
+  productId        String
+
+  predictedDemand  Int
   recommendedStock Int
-  predictionDate  DateTime
-  modelVersion    String
-  confidenceScore Float?
-  createdAt       DateTime @default(now())
 
-  store           Store   @relation(fields: [storeId], references: [id])
-  product         Product @relation(fields: [productId], references: [id])
+  modelVersion     String
+  confidenceScore  Float?
+  predictionDate   DateTime
+
+  createdAt        DateTime @default(now())
+
+  store            Store        @relation(fields: [storeId], references: [id])
+  product          Product      @relation(fields: [productId], references: [id])
+  organization     Organization @relation(fields: [organizationId], references: [id])
+
+  @@unique([storeId, productId, predictionDate])
 }
-

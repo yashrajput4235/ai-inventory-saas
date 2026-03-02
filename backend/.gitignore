@@ -38,3 +38,6 @@ coverage/
 # Mac system
 .AppleDouble
 .LSOverride
+
+#keys
+config/gcp-service-account.json

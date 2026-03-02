@@ -2,7 +2,7 @@ const express=require("express");
 const router=express.Router();
 const {authMiddleware}=require("../middleware/auth.middleware");
 const {roleMiddleware}=require("../middleware/role.middleware");
-const { getStoreSummary, getTopProducts } = require("../controllers/analytics.controller");
+const { getStoreSummary, getTopProducts,getLowStockProducts } = require("../controllers/analytics.controller");
 
 router.get(
     "/store-summary/:storeId",
@@ -15,6 +15,13 @@ router.get(
   authMiddleware,
   roleMiddleware(["admin", "manager"]),
   getTopProducts
+);
+
+router.get(
+  "/low-stock/:storeId",
+  authMiddleware,
+  roleMiddleware(["admin", "manager"]),
+  getLowStockProducts
 );
 
 module.exports=router;

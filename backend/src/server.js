@@ -4,7 +4,20 @@ const express = require("express");
 const cors = require("cors");
 const cookieParser = require("cookie-parser");
 const { apiLimiter } = require("./middleware/rateLimit.middleware");
+const forecastRoutes = require("./routes/forecastRoutes");
 const routes = require("./routes");
+const alertRoutes = require("./routes/alertRoutes");
+const forecastJobRoutes = require("./routes/forecastJobRoutes");
+const reorderRoutes = require("./routes/reorderRoutes");
+const dashboardRoutes = require("./routes/dashboardRoutes");
+const trendRoutes = require("./routes/trendRoutes");
+const retrainRoutes = require("./routes/retrainRoutes");
+
+
+
+
+
+
 
 const app = express();
 
@@ -23,7 +36,13 @@ app.use("/api", apiLimiter);
 
 // Routes
 app.use("/api", routes);
-
+app.use("/api", forecastRoutes);
+app.use("/api", alertRoutes);
+app.use("/api", forecastJobRoutes);
+app.use("/api", reorderRoutes);
+app.use("/api", dashboardRoutes);
+app.use("/api", trendRoutes);
+app.use("/api", retrainRoutes);
 const PORT = process.env.PORT || 5001;
 
 app.listen(PORT, () => {

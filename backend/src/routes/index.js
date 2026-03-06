@@ -15,12 +15,7 @@ const analyticsRoutes = require("./analytics.routes");
 
 router.use("/auth", authRoutes);
 
-router.get("/dashboard", authMiddleware, (req, res) => {
-  res.json({
-    message: "Protected route working 🔐",
-    user: req.user,
-  });
-});
+
 
 router.use("/stores", storeRoutes);
 

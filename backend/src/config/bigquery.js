@@ -4,7 +4,6 @@ let credentialsInfo = {};
 
 try {
   // FIRST APPROACH: Base64 Encoded parsing (Safest for Render)
-  // This bypasses ALL newline escaping and spacing issues platform providers introduce
   if (process.env.GOOGLE_CREDENTIALS_BASE64) {
     const decodedString = Buffer.from(process.env.GOOGLE_CREDENTIALS_BASE64, 'base64').toString('utf8');
     const rawJSON = JSON.parse(decodedString);
@@ -39,12 +38,24 @@ try {
   console.error("Failed to parse GOOGLE_CREDENTIALS:", err.message);
 }
 
-const bigquery = new BigQuery({
-  projectId: process.env.BIGQUERY_PROJECT_ID,
-  credentials: {
-    client_email: credentialsInfo.client_email,
-    private_key: credentialsInfo.private_key
-  }
-});
+// Ensure we AT LEAST have an email and key before initializing
+if (!credentialsInfo.client_email) {
+  console.warn("WARNING: target client_email missing from Google Credentials parsed object.");
+  // Final ultimate fallback - grab it directly if we can't parse it
+  credentialsInfo.client_email = process.env.GCP_CLIENT_EMAIL || 'inventory-backend-sa@ai-inventory-forecasting.iam.gserviceaccount.com';
+}
+
+let bigquery = null;
+try {
+  bigquery = new BigQuery({
+    projectId: process.env.BIGQUERY_PROJECT_ID || 'ai-inventory-forecasting',
+    credentials: {
+      client_email: credentialsInfo.client_email,
+      private_key: credentialsInfo.private_key
+    }
+  });
+} catch (e) {
+  console.error("Failed to initialize BigQuery Client Object:", e.message);
+}
 
 module.exports = bigquery;

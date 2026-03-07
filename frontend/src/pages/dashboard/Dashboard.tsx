@@ -139,7 +139,7 @@ export default function Dashboard() {
           }}
         >
           <AlertCircle className="w-4 h-4 flex-shrink-0" />
-          Backend unreachable — is localhost:5001 running?
+          Backend unreachable — is the API server running?
         </div>
       )}
 

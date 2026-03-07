@@ -46,6 +46,7 @@ try {
 
 } catch (err) {
   console.error("CRITICAL ERROR IN BIGQUERY CONFIG:", err.message);
+  throw err; // Stop server startup so Render logs the exact initialization error
 }
 
 module.exports = bqClient;

@@ -101,6 +101,27 @@ Logs out the user and clears the cookie.
   }
   ```
 
+### `GET /api/auth/admin-dashboard`
+Returns a simple welcome message for the admin dashboard.
+**Auth**: Admin only.
+- **Response Structure (200 OK):**
+  ```json
+  {
+    "message": "Admin dashboard"
+  }
+  ```
+
+### `GET /api/auth/manager-dashboard`
+Returns a simple welcome message for the manager dashboard.
+**Auth**: Manager only.
+- **Response Structure (200 OK):**
+  ```json
+  {
+    "message": "Manager dashboard"
+  }
+  ```
+
+
 ---
 
 ## 2. Organization (`/api/org`)
@@ -146,6 +167,24 @@ Creates a new organization alongside an admin user.
       "location": "New York, NY",
       "organizationId": "org-uuid"
     }
+  }
+  ```
+
+### `GET /api/stores/`
+**Auth**: Admin / Manager. Gets all stores for the organization.
+- **Response Structure (200 OK):**
+  ```json
+  {
+    "stores": [
+      {
+        "id": "store-uuid",
+        "name": "Downtown Branch",
+        "location": "New York, NY",
+        "organizationId": "org-uuid",
+        "employees": 12,
+        "revenue": "$14,500"
+      }
+    ]
   }
   ```
 
@@ -313,6 +352,22 @@ Creates a new organization alongside an admin user.
 
 ### `GET /api/analytics/low-stock/:storeId`
 **Auth**: Admin / Manager. Returns items below their assigned `lowStockThreshold`.
+- **Response Structure (200 OK):**
+  ```json
+  [
+    {
+      "id": "inv-uuid",
+      "storeId": "store-uuid",
+      "productId": "product-uuid",
+      "quantity": 5,
+      "lowStockThreshold": 10,
+      "product": {
+        "name": "Wireless Mouse",
+        "sku": "WM-001"
+      }
+    }
+  ]
+  ```
 
 ---
 
@@ -371,6 +426,21 @@ Generates optimal reorder quantities based on predictions and a safety buffer.
 
 ### `GET /api/dashboard`
 Aggregated view for the central dashboard listing demand and reorder metrics.
+- **Response Structure (200 OK):**
+  ```json
+  {
+    "success": true,
+    "dashboard": [
+      {
+        "series_id": "product-uuid",
+        "date": "2026-03-08",
+        "predicted_demand": 50,
+        "current_stock": 10,
+        "recommended_order": 50
+      }
+    ]
+  }
+  ```
 
 ### `GET /api/trend?series_id={product_id}`
 Demand trend over time for a specific product ID.

@@ -62,7 +62,7 @@ exports.getStoreSummary=async(req,res)=>{
         res.json({
             totalRevenue: salesAggregate._sum.totalAmount || 0,
             totalProfit: salesAggregate._sum.profit || 0,
-            totalSales: salesAggregate._count || 0,
+            totalSales: salesAggregate._count.id || 0,
             inventoryValue,
         });
 

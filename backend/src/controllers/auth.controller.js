@@ -120,11 +120,11 @@ exports.verifyOtp = async (req, res) => {
     );
 
     res.cookie("token", token, {
-  httpOnly: true,
-  secure: false, // true in production (HTTPS)
-  sameSite: "strict",
-  maxAge: 24 * 60 * 60 * 1000, // 1 day
-});
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production", 
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
+      maxAge: 24 * 60 * 60 * 1000, // 1 day
+    });
 
 res.json({
   message: "Account verified successfully",
@@ -199,11 +199,11 @@ exports.loginUser=async(req,res)=>{
             process.env.JWT_SECRET,
             {expiresIn:"1d"}
         )
-        res.cookie("token",token,{
-            httpOnly:true,
-            secure:false, // true in production (HTTPS)
-            sameSite:"strict",
-            maxAge:24*60*60*1000, //// 1 day
+        res.cookie("token", token, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production",
+            sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
+            maxAge: 24 * 60 * 60 * 1000, //// 1 day
         })
         res.json({message:"Login successful"});
     }
@@ -237,7 +237,8 @@ exports.forgotPassword = async (req, res) => {
       },
     });
 
-    const resetLink = `http://localhost:3000/reset-password?token=${resetToken}`;
+    const frontendUrl = process.env.FRONTEND_URL ? process.env.FRONTEND_URL.split(",")[0] : "http://localhost:3000";
+    const resetLink = `${frontendUrl}/reset-password?token=${resetToken}`;
 
     await transporter.sendMail({
       from: process.env.EMAIL_USER,

@@ -25,12 +25,12 @@ const app = express();
 app.set('trust proxy', 1);
 
 // CORS (important for cookies)
+const allowedOrigins = process.env.FRONTEND_URL 
+  ? process.env.FRONTEND_URL.split(",") 
+  : ["http://localhost:3000", "http://localhost:5173", "http://localhost:5174"];
+
 app.use(cors({
-  origin: [
-    "http://localhost:3000",
-    "http://localhost:5173",
-    "http://localhost:5174",
-  ],
+  origin: allowedOrigins,
   credentials: true
 }));
 

@@ -35,6 +35,12 @@ app.use(cors({
 app.use(express.json());
 app.use(cookieParser());
 
+// Debug logger for all requests
+app.use((req, res, next) => {
+  console.log(`[DEBUG] ${req.method} ${req.url}`);
+  next();
+});
+
 // Apply rate limiter to API
 app.use("/api", apiLimiter);
 

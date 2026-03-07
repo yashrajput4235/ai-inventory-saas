@@ -2,17 +2,39 @@ const { PredictionServiceClient } = require('@google-cloud/aiplatform');
 const prisma = require("../config/prisma");
 const bqClient = require("../config/bigquery");
 
-const vertexClient = new PredictionServiceClient({
-  apiEndpoint: 'us-central1-aiplatform.googleapis.com'
-});
-
 /**
  * Controller to run a global forecasting job across all stores
  * Triggered by Google Cloud Scheduler
  */
 exports.runDailyForecast = async (req, res) => {
   try {
-    console.log("Starting Daily Forecast Job...");
+    console.log(`[FORECAST JOB] Request received: ${req.method} ${req.url}`);
+    console.log(`[FORECAST JOB] Headers:`, JSON.stringify(req.headers));
+
+    if (!process.env.GOOGLE_CREDENTIALS) {
+      throw new Error("Missing GOOGLE_CREDENTIALS environment variable");
+    }
+
+    if (!process.env.VERTEX_AI_MODEL_ID) {
+      throw new Error("Missing VERTEX_AI_MODEL_ID environment variable");
+    }
+
+    const creds = JSON.parse(process.env.GOOGLE_CREDENTIALS);
+    if (creds.private_key && creds.private_key.includes('\\n')) {
+      creds.private_key = creds.private_key.replace(/\\n/g, '\n');
+    }
+
+    // Initialize Vertex AI Client with credentials
+    const vertexClient = new PredictionServiceClient({
+      apiEndpoint: 'us-central1-aiplatform.googleapis.com',
+      credentials: {
+        client_email: creds.client_email,
+        private_key: creds.private_key
+      },
+      projectId: creds.project_id
+    });
+
+    console.log("Starting Daily Forecast Job execution...");
     
     // 1. Fetch all active stores
     const stores = await prisma.store.findMany({

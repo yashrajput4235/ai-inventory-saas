@@ -21,6 +21,9 @@ const retrainRoutes = require("./routes/retrainRoutes");
 
 const app = express();
 
+// Trust proxy (required for Render/Cloudflare)
+app.set('trust proxy', 1);
+
 // CORS (important for cookies)
 app.use(cors({
   origin: [

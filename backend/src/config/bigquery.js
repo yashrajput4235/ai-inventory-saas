@@ -1,61 +1,51 @@
 const { BigQuery } = require('@google-cloud/bigquery');
+const fs = require('fs');
+const path = require('path');
 
-let credentialsInfo = {};
+let bqClient = null;
 
 try {
-  // FIRST APPROACH: Base64 Encoded parsing (Safest for Render)
+  let credentialsObj = null;
+
+  // 1. Production / Render approach: Base64 String
   if (process.env.GOOGLE_CREDENTIALS_BASE64) {
-    const decodedString = Buffer.from(process.env.GOOGLE_CREDENTIALS_BASE64, 'base64').toString('utf8');
-    const rawJSON = JSON.parse(decodedString);
-    credentialsInfo.client_email = rawJSON.client_email;
-    credentialsInfo.private_key = rawJSON.private_key;
-    console.log("Loaded BigQuery credentials securely via Base64.");
-  } 
-  // SECOND APPROACH: Standard JSON parsing (For local development)
-  else if (process.env.GOOGLE_CREDENTIALS) {
-    let credString = process.env.GOOGLE_CREDENTIALS;
-    const rawJSON = JSON.parse(credString);
-    
-    credentialsInfo.client_email = rawJSON.client_email;
-    let key = rawJSON.private_key || '';
-    
-    // Convert any literal \n strings to real newlines
-    key = key.replace(/\\n/g, '\n');
-    
-    // Ensure the key is properly formatted as a PEM file
-    if (!key.includes('\n') && key.includes('-----BEGIN PRIVATE KEY-----')) {
-       key = key.replace('-----BEGIN PRIVATE KEY-----', '-----BEGIN PRIVATE KEY-----\n');
-       key = key.replace('-----END PRIVATE KEY-----', '\n-----END PRIVATE KEY-----\n');
-       const body = key.replace('-----BEGIN PRIVATE KEY-----\n', '').replace('\n-----END PRIVATE KEY-----\n', '').replace(/\s/g, '');
-       const chunkedBody = body.match(/.{1,64}/g).join('\n');
-       key = `-----BEGIN PRIVATE KEY-----\n${chunkedBody}\n-----END PRIVATE KEY-----\n`;
-    }
-    
-    credentialsInfo.private_key = key;
-    console.log("Loaded BigQuery credentials via standard JSON.");
+    const decodedVal = Buffer.from(process.env.GOOGLE_CREDENTIALS_BASE64, 'base64').toString('utf8');
+    credentialsObj = JSON.parse(decodedVal);
+    console.log("Using Base64 decoded credentials");
   }
-} catch (err) {
-  console.error("Failed to parse GOOGLE_CREDENTIALS:", err.message);
-}
-
-// Ensure we AT LEAST have an email and key before initializing
-if (!credentialsInfo.client_email) {
-  console.warn("WARNING: target client_email missing from Google Credentials parsed object.");
-  // Final ultimate fallback - grab it directly if we can't parse it
-  credentialsInfo.client_email = process.env.GCP_CLIENT_EMAIL || 'inventory-backend-sa@ai-inventory-forecasting.iam.gserviceaccount.com';
-}
-
-let bigquery = null;
-try {
-  bigquery = new BigQuery({
-    projectId: process.env.BIGQUERY_PROJECT_ID || 'ai-inventory-forecasting',
-    credentials: {
-      client_email: credentialsInfo.client_email,
-      private_key: credentialsInfo.private_key
+  // 2. Local approach: Raw parsed JSON string
+  else if (process.env.GOOGLE_CREDENTIALS) {
+    credentialsObj = JSON.parse(process.env.GOOGLE_CREDENTIALS);
+    
+    // Fix escaped newlines for local dev if they copy-pasted wrong
+    if (credentialsObj.private_key && credentialsObj.private_key.includes('\\n')) {
+      credentialsObj.private_key = credentialsObj.private_key.replace(/\\n/g, '\n');
     }
+    console.log("Using literal GOOGLE_CREDENTIALS env var");
+  }
+  // 3. Fallback: Local JSON file
+  else {
+    const keyPath = path.join(__dirname, 'gcp-service-account.json');
+    if (fs.existsSync(keyPath)) {
+      credentialsObj = JSON.parse(fs.readFileSync(keyPath, 'utf8'));
+      console.log("Using local JSON file for credentials");
+    }
+  }
+
+  if (!credentialsObj) {
+    throw new Error("No valid Google Credentials found in environment or local file.");
+  }
+
+  // Initialize BigQuery directly with the raw parsed API object
+  bqClient = new BigQuery({
+    projectId: process.env.BIGQUERY_PROJECT_ID || credentialsObj.project_id || 'ai-inventory-forecasting',
+    credentials: credentialsObj // Pass the entire object directly
   });
-} catch (e) {
-  console.error("Failed to initialize BigQuery Client Object:", e.message);
+  
+  console.log("BigQuery Client successfully initialized.");
+
+} catch (err) {
+  console.error("CRITICAL ERROR IN BIGQUERY CONFIG:", err.message);
 }
 
-module.exports = bigquery;
+module.exports = bqClient;

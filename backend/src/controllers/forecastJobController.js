@@ -9,7 +9,12 @@ const bqClient = require("../config/bigquery");
 exports.runDailyForecast = async (req, res) => {
   try {
     console.log(`[FORECAST JOB] Request received: ${req.method} ${req.url}`);
-    console.log(`[FORECAST JOB] Headers:`, JSON.stringify(req.headers));
+    
+    if (!process.env.DATABASE_URL) {
+      console.error("[CRITICAL] DATABASE_URL is missing from environment variables!");
+    } else if (!process.env.DATABASE_URL.startsWith('postgres')) {
+      console.error("[CRITICAL] DATABASE_URL exists but is malformed (doesn't start with postgres://)");
+    }
 
     if (!process.env.GOOGLE_CREDENTIALS) {
       throw new Error("Missing GOOGLE_CREDENTIALS environment variable");

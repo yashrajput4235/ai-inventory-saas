@@ -18,11 +18,6 @@ try {
     if (credentialsObj.private_key && credentialsObj.private_key.includes('\\n')) {
       credentialsObj.private_key = credentialsObj.private_key.replace(/\\n/g, '\n');
     }
-
-    // Write the corrected credentials to a secure, temporary file path so the Google SDK can read it natively
-    keyFilePath = path.join(os.tmpdir(), `gcp-creds-${Date.now()}.json`);
-    fs.writeFileSync(keyFilePath, JSON.stringify(credentialsObj, null, 2), { mode: 0o600 });
-    console.log("Credentials written to secure temp file for Google SDK natively.");
   }
   // 2. Fallback: Local JSON file
   else {
@@ -34,17 +29,42 @@ try {
     console.log("Using local JSON file for credentials directly.");
   }
 
-  // Initialize BigQuery using keyFilename rather than credentials object mapping
+  // Initialize BigQuery directly with the raw parsed API object
+  console.log("=== DIAGNOSTIC: RSA KEY DECODING ===");
+  if (credentialsObj && credentialsObj.private_key) {
+    let rawKey = credentialsObj.private_key;
+    console.log("Key Length:", rawKey.length);
+    console.log("Includes \\n string:", rawKey.includes('\\n'));
+    console.log("Includes actual newline:", rawKey.includes('\n'));
+    console.log("ASCII Code at line breaks:", rawKey.substring(25, 30).split('').map(c => c.charCodeAt(0)));
+  }
+  
   bqClient = new BigQuery({
     projectId: credentialsObj.project_id || 'ai-inventory-forecasting',
-    keyFilename: keyFilePath
+    credentials: credentialsObj
   });
   
-  console.log("BigQuery Client successfully initialized via physical file path.");
+  console.log("BigQuery Client successfully initialized via credentials object.");
 
 } catch (err) {
   console.error("CRITICAL ERROR IN BIGQUERY CONFIG:", err.message);
   throw err; // Stop server startup so Render logs the exact initialization error
+}
+
+// Ensure RSA signature works immediately to catch OpenSSL errors dynamically
+if (bqClient) {
+  import('google-auth-library').then(({ JWT }) => {
+     try {
+       const client = new JWT({
+         email: bqClient.options.credentials.client_email,
+         key: bqClient.options.credentials.private_key,
+         scopes: ['https://www.googleapis.com/auth/cloud-platform']
+       });
+       client.getAccessToken().catch(e => {
+         console.error("JWT RSA Verification Failed:", e.message);
+       });
+     } catch(e) {}
+  }).catch(e => {});
 }
 
 module.exports = bqClient;

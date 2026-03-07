@@ -19,11 +19,12 @@ exports.getLowStockAlerts=async(req,res)=>{
       })
      
     }
-    catch(error){
-        console.error(error);
-        res.status(500).json({
-            success:false,
-            message:"Error fetching alerts"
-        })
-    }
+    catch (error) {
+  console.error("ALERT ERROR:", error);
+
+  res.status(500).json({
+    success: false,
+    message: error.message
+  });
+}
 };

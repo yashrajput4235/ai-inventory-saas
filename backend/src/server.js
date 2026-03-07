@@ -48,6 +48,8 @@ app.use("/api", dashboardRoutes);
 app.use("/api", trendRoutes);
 app.use("/api", retrainRoutes);
 const PORT = process.env.PORT || 5001;
+console.log("PROJECT:", process.env.BIGQUERY_PROJECT_ID);
+console.log("HAS CREDS:", !!process.env.GOOGLE_CREDENTIALS);
 
 app.listen(PORT, () => {
   console.log(`Server running in ${process.env.NODE_ENV} mode on port ${PORT}`);

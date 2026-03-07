@@ -7,39 +7,46 @@ let bqClient = null;
 try {
   let credentialsObj = null;
 
-  // 1. Production / Render approach: Base64 String
-  if (process.env.GOOGLE_CREDENTIALS_BASE64) {
-    const decodedVal = Buffer.from(process.env.GOOGLE_CREDENTIALS_BASE64, 'base64').toString('utf8');
-    credentialsObj = JSON.parse(decodedVal);
-    console.log("Using Base64 decoded credentials");
-  }
-  // 2. Local approach: Raw parsed JSON string
-  else if (process.env.GOOGLE_CREDENTIALS) {
-    credentialsObj = JSON.parse(process.env.GOOGLE_CREDENTIALS);
+  // 1. Production / Render approach: Raw parsed JSON string with robust replacements
+  if (process.env.GOOGLE_CREDENTIALS) {
+    let credString = process.env.GOOGLE_CREDENTIALS;
+    const rawJSON = JSON.parse(credString);
     
-    // Fix escaped newlines for local dev if they copy-pasted wrong
+    // Create a brand new clean object from scratch to bypass Google Auth strict field validation
+    credentialsObj = {
+      type: rawJSON.type || "service_account",
+      project_id: rawJSON.project_id || process.env.BIGQUERY_PROJECT_ID,
+      private_key_id: rawJSON.private_key_id,
+      private_key: rawJSON.private_key,
+      client_email: rawJSON.client_email,
+      client_id: rawJSON.client_id,
+      auth_uri: rawJSON.auth_uri || "https://accounts.google.com/o/oauth2/auth",
+      token_uri: rawJSON.token_uri || "https://oauth2.googleapis.com/token",
+      auth_provider_x509_cert_url: rawJSON.auth_provider_x509_cert_url || "https://www.googleapis.com/oauth2/v1/certs",
+      client_x509_cert_url: rawJSON.client_x509_cert_url
+    };
+    
+    // Fix escaped newlines for Render platform and local dev alike
     if (credentialsObj.private_key && credentialsObj.private_key.includes('\\n')) {
       credentialsObj.private_key = credentialsObj.private_key.replace(/\\n/g, '\n');
     }
-    console.log("Using literal GOOGLE_CREDENTIALS env var");
   }
-  // 3. Fallback: Local JSON file
+  // 2. Fallback: Local JSON file
   else {
     const keyPath = path.join(__dirname, 'gcp-service-account.json');
     if (fs.existsSync(keyPath)) {
       credentialsObj = JSON.parse(fs.readFileSync(keyPath, 'utf8'));
-      console.log("Using local JSON file for credentials");
     }
   }
 
   if (!credentialsObj) {
-    throw new Error("No valid Google Credentials found in environment or local file.");
+    throw new Error("No GOOGLE_CREDENTIALS string found in environment variables.");
   }
 
   // Initialize BigQuery directly with the raw parsed API object
   bqClient = new BigQuery({
-    projectId: process.env.BIGQUERY_PROJECT_ID || credentialsObj.project_id || 'ai-inventory-forecasting',
-    credentials: credentialsObj // Pass the entire object directly
+    projectId: credentialsObj.project_id || 'ai-inventory-forecasting',
+    credentials: credentialsObj
   });
   
   console.log("BigQuery Client successfully initialized.");

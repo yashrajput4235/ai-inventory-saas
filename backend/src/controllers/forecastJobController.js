@@ -29,15 +29,15 @@ exports.runDailyForecast = async (req, res) => {
     for (const store of stores) {
       console.log(`Processing Store: ${store.name} (${store.id})`);
 
-      // 3. Query BigQuery for daily sales total per product (last 30 days)
+      // 3. Query BigQuery for daily sales summary (last 30 days)
       const bqQuery = `
         SELECT 
-          productId, 
-          DATE_TRUNC(soldAt, DAY) as saleDay, 
-          SUM(quantity) as totalQty
-        FROM \`${process.env.BIGQUERY_PROJECT_ID}.inventory_ds.sales\`
-        WHERE storeId = @storeId
-          AND soldAt >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 30 DAY)
+          product_id as productId, 
+          date as saleDay, 
+          SUM(total_quantity) as totalQty
+        FROM \`${process.env.BIGQUERY_PROJECT_ID}.inventory_warehouse.daily_sales_summary\`
+        WHERE store_id = @storeId
+          AND date >= DATE_SUB(CURRENT_DATE(), INTERVAL 30 DAY)
         GROUP BY 1, 2
         ORDER BY 1, 2 ASC
       `;
@@ -48,10 +48,15 @@ exports.runDailyForecast = async (req, res) => {
           params: { storeId: store.id }
         });
 
+        if (!rows.length) {
+          console.log(`No sales data in BigQuery for Store ${store.id}`);
+          continue;
+        }
+
         // 4. Group rows by product to build timeseries
         const productTrends = rows.reduce((acc, row) => {
           if (!acc[row.productId]) acc[row.productId] = [];
-          acc[row.productId].push(row.totalQty);
+          acc[row.productId].push(Number(row.totalQty));
           return acc;
         }, {});
 

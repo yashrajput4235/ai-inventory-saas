@@ -105,13 +105,16 @@ exports.runDailyForecast = async (req, res) => {
             const [response] = await vertexClient.predict(vertexRequest);
             const predictionValue = Math.round(response.predictions[0] || 0);
 
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
             // 6. Save/Upsert result into DB
             await prisma.prediction.upsert({
               where: {
                 storeId_productId_predictionDate: {
                   storeId: store.id,
                   productId: productId,
-                  predictionDate: new Date()
+                  predictionDate: today
                 }
               },
               update: {
@@ -125,7 +128,7 @@ exports.runDailyForecast = async (req, res) => {
                 productId: productId,
                 predictedDemand: predictionValue,
                 recommendedStock: Math.ceil(predictionValue * 1.2),
-                predictionDate: new Date(),
+                predictionDate: today,
                 modelVersion: "v1-vertex-ai"
               }
             });

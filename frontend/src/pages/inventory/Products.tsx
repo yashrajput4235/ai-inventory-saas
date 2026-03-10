@@ -6,6 +6,15 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { motion, AnimatePresence } from "framer-motion";
 import { getProducts, createProduct } from "@/services/dataService";
+import { jwtDecode } from "jwt-decode";
+
+// Helper to get cookie by name
+function getCookie(name: string) {
+  const value = `; ${document.cookie}`;
+  const parts = value.split(`; ${name}=`);
+  if (parts.length === 2) return parts.pop()?.split(";").shift();
+  return null;
+}
 
 const productSchema = z.object({
   name: z.string().min(2, "Required"),
@@ -49,6 +58,18 @@ export default function Products() {
   const [search, setSearch] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
 
+  // Determine user role from JWT token cookie
+  let userRole = "manager"; // Default to least privilege
+  try {
+    const token = getCookie("token");
+    if (token) {
+      const decoded: any = jwtDecode(token);
+      userRole = decoded.role || "manager";
+    }
+  } catch (error) {
+    console.error("Failed to decode token", error);
+  }
+
   const { data: productsData, isLoading, isError } = useQuery({
     queryKey: ["products"],
     queryFn: getProducts,
@@ -91,16 +112,20 @@ export default function Products() {
             Products
           </h1>
         </div>
-        <button
-          onClick={() => setModalOpen(true)}
-          className="flex items-center gap-2 px-3 py-2 rounded text-sm font-semibold transition-colors"
-          style={{ background: "var(--accent-amber)", color: "#0a0b0d", fontFamily: "var(--font-display)" }}
-          onMouseEnter={(e) => (e.currentTarget.style.background = "var(--accent-amber-dim)")}
-          onMouseLeave={(e) => (e.currentTarget.style.background = "var(--accent-amber)")}
-        >
-          <Plus className="w-4 h-4" />
-          New Product
-        </button>
+        
+        {/* Only Admin can create products */}
+        {userRole === "admin" && (
+          <button
+            onClick={() => setModalOpen(true)}
+            className="flex items-center gap-2 px-3 py-2 rounded text-sm font-semibold transition-colors"
+            style={{ background: "var(--accent-amber)", color: "#0a0b0d", fontFamily: "var(--font-display)" }}
+            onMouseEnter={(e) => (e.currentTarget.style.background = "var(--accent-amber-dim)")}
+            onMouseLeave={(e) => (e.currentTarget.style.background = "var(--accent-amber)")}
+          >
+            <Plus className="w-4 h-4" />
+            New Product
+          </button>
+        )}
       </div>
 
       {/* Table Panel */}

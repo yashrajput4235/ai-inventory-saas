@@ -43,7 +43,7 @@ const NAV_SECTIONS = [
     items: [
       { to: "/alerts", label: "Stock Alerts", icon: AlertTriangle },
       { to: "/reorder", label: "Smart Reorder", icon: RefreshCcw },
-      { to: "/forecast", label: "AI Forecast", icon: TrendingUp },
+      // { to: "/forecast", label: "AI Forecast", icon: TrendingUp }, // Temporarily disabled until page is built
     ]
   },
   {

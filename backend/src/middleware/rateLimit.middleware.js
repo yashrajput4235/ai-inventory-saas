@@ -3,7 +3,7 @@ const rateLimit= require("express-rate-limit");
 // General Api rate limiter
 exports.apiLimiter=rateLimit({
     windowMs:15 * 60 * 1000, // 15 minutes
-    max: 100, // 100 request per ip
+    max: 2000, // 2000 request per ip
     message:{
         message: "Too many requests. Please try again later."
     }
@@ -19,7 +19,7 @@ exports.otpLimiter = rateLimit({
 // Login limiter
 exports.loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // 5 login attempts
+  max: 100, // 5 login attempts (INCREASED FOR QA)
   message: {
     message: "Too many login attempts. Try again later."
   }

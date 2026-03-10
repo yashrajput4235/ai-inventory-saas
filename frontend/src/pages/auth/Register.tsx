@@ -164,7 +164,7 @@ export default function Register() {
             {registerMutation.isError && (
               <div className="p-3 bg-red-50 text-red-600 text-sm rounded-md border border-red-100 flex items-center gap-2 font-medium mt-4">
                 <AlertCircle className="w-4 h-4 shrink-0" />
-                Registration failed. Email may be taken or server down.
+                {(registerMutation.error as any)?.response?.data?.message || "Registration failed. Email may be taken or server down."}
               </div>
             )}
 

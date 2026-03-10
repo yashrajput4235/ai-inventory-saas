@@ -11,6 +11,11 @@ export const registerUser = async (data: any) => {
   return response.data;
 };
 
+export const addStoreManager = async (data: any) => {
+  const response = await api.post("/org/add-manager", data);
+  return response.data;
+};
+
 export const loginUser = async (data: any) => {
   const response = await api.post("/auth/login", data);
   return response.data;
@@ -96,6 +101,11 @@ export const getInventory = async (storeId: string) => {
 // Store Management
 export const createStore = async (data: any) => {
   const response = await api.post("/stores", data);
+  return response.data;
+};
+
+export const getStores = async () => {
+  const response = await api.get("/stores");
   return response.data;
 };
 

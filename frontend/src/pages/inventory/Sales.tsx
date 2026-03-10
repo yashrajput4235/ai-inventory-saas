@@ -7,13 +7,21 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { getProducts, recordSale } from "@/services/dataService";
+import { getProducts, recordSale, getStores } from "@/services/dataService";
 
 export default function Sales() {
-  const STORE_ID = "replace-with-real-store-id"; // Temp placeholder until full auth state
   const [searchTerm, setSearchTerm] = useState("");
+  const [selectedStore, setSelectedStore] = useState<string>("");
   const [cart, setCart] = useState<{product: any, quantity: number}[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
+
+  const { data: storesData } = useQuery({
+    queryKey: ["stores"],
+    queryFn: getStores,
+  });
+  
+  const stores = storesData?.stores || [];
+  const activeStoreId = selectedStore || (stores.length > 0 ? stores[0].id : "");
 
   // Fetch catalog to sell from
   const { data: productsData, isLoading, isError } = useQuery({
@@ -82,7 +90,7 @@ export default function Sales() {
     // to record a multi-item transaction. Here we map over them based on the API spec. `recordSale` takes one product.
     cart.forEach((item) => {
       saleMutation.mutate({
-        storeId: STORE_ID,
+        storeId: activeStoreId,
         productId: item.product.id,
         quantity: item.quantity
       });
@@ -98,11 +106,24 @@ export default function Sales() {
     >
       {/* Product Catalog Side */}
       <div className="lg:col-span-2 flex flex-col space-y-4">
-        <div>
-          <h2 className="text-3xl font-bold tracking-tight">Point of Sale</h2>
-          <p className="text-muted-foreground mt-1">
-            Browse products and ring up customer sales.
-          </p>
+        <div className="flex justify-between items-start">
+          <div>
+            <h2 className="text-3xl font-bold tracking-tight">Point of Sale</h2>
+            <p className="text-muted-foreground mt-1">
+              Browse products and ring up customer sales.
+            </p>
+          </div>
+          {stores.length > 1 && (
+            <select
+              value={activeStoreId}
+              onChange={(e) => setSelectedStore(e.target.value)}
+              className="text-sm rounded-md px-3 py-2 border border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 outline-none"
+            >
+              {stores.map((s: any) => (
+                <option key={s.id} value={s.id}>{s.name}</option>
+              ))}
+            </select>
+          )}
         </div>
 
         <div className="relative">

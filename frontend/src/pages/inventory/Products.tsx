@@ -5,16 +5,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { motion, AnimatePresence } from "framer-motion";
-import { getProducts, createProduct } from "@/services/dataService";
-import { jwtDecode } from "jwt-decode";
-
-// Helper to get cookie by name
-function getCookie(name: string) {
-  const value = `; ${document.cookie}`;
-  const parts = value.split(`; ${name}=`);
-  if (parts.length === 2) return parts.pop()?.split(";").shift();
-  return null;
-}
+import { getProducts, createProduct, getStores } from "@/services/dataService";
 
 const productSchema = z.object({
   name: z.string().min(2, "Required"),
@@ -22,6 +13,8 @@ const productSchema = z.object({
   category: z.string().min(2, "Required"),
   price: z.preprocess((v) => Number(v), z.number().positive("Must be positive")),
   cost: z.preprocess((v) => Number(v), z.number().positive("Must be positive")),
+  quantity: z.preprocess((v) => Number(v) || 0, z.number().min(0, "Cannot be negative").optional()),
+  storeId: z.string().optional(),
 });
 
 type ProductForm = z.infer<typeof productSchema>;
@@ -58,17 +51,8 @@ export default function Products() {
   const [search, setSearch] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
 
-  // Determine user role from JWT token cookie
-  let userRole = "manager"; // Default to least privilege
-  try {
-    const token = getCookie("token");
-    if (token) {
-      const decoded: any = jwtDecode(token);
-      userRole = decoded.role || "manager";
-    }
-  } catch (error) {
-    console.error("Failed to decode token", error);
-  }
+  // Determine user role from localStorage
+  const userRole = localStorage.getItem("userRole") || "manager";
 
   const { data: productsData, isLoading, isError } = useQuery({
     queryKey: ["products"],
@@ -76,6 +60,13 @@ export default function Products() {
   });
 
   const products = productsData?.products || [];
+
+  const { data: storesData } = useQuery({
+    queryKey: ["stores"],
+    queryFn: getStores,
+  });
+  
+  const stores = storesData?.stores || [];
 
   const mutation = useMutation({
     mutationFn: createProduct,
@@ -306,6 +297,23 @@ export default function Products() {
                 <div className="grid grid-cols-2 gap-3">
                   <FormInput label="Selling Price ($)" type="number" step="0.01" placeholder="29.99" error={errors.price?.message} {...register("price")} />
                   <FormInput label="Unit Cost ($)" type="number" step="0.01" placeholder="12.50" error={errors.cost?.message} {...register("cost")} />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <FormInput label="Initial Quantity" type="number" placeholder="0" error={errors.quantity?.message} {...register("quantity")} />
+                  <div>
+                    <label className="data-label block mb-1.5">Assign to Store</label>
+                    <select
+                      {...register("storeId")}
+                      style={inputStyle}
+                      onFocus={(e) => { e.target.style.borderColor = "var(--accent-amber)"; e.target.style.boxShadow = "0 0 0 2px var(--accent-amber-glow)"; }}
+                      onBlur={(e) => { e.target.style.borderColor = "var(--border-default)"; e.target.style.boxShadow = "none"; }}
+                    >
+                      <option value="">Default / First Store</option>
+                      {stores.map((s: any) => (
+                        <option key={s.id} value={s.id}>{s.name}</option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
 
                 {mutation.isError && (

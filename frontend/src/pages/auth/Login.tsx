@@ -36,7 +36,10 @@ export default function Login() {
 
   const loginMutation = useMutation({
     mutationFn: loginUser,
-    onSuccess: () => navigate("/dashboard"),
+    onSuccess: (data) => {
+      if (data?.role) localStorage.setItem("userRole", data.role);
+      navigate("/dashboard");
+    },
     onError: () => {},
   });
 

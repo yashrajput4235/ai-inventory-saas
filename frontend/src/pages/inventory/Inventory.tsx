@@ -2,9 +2,7 @@ import { useState } from "react";
 import { Search, X, Package, AlertCircle } from "lucide-react";
 import { motion } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
-import { getInventory } from "@/services/dataService";
-
-const STORE_ID = "replace-with-real-store-id";
+import { getInventory, getStores } from "@/services/dataService";
 
 function StatusBadge({ stock, threshold }: { stock: number; threshold: number }) {
   const isLow = stock <= threshold;
@@ -35,12 +33,24 @@ function StatusBadge({ stock, threshold }: { stock: number; threshold: number })
 
 export default function Inventory() {
   const [search, setSearch] = useState("");
+  const [selectedStore, setSelectedStore] = useState<string>("");
 
-  const { data: inventoryResponse, isLoading, isError } = useQuery({
-    queryKey: ["inventory", STORE_ID],
-    queryFn: () => getInventory(STORE_ID),
+  const { data: storesData } = useQuery({
+    queryKey: ["stores"],
+    queryFn: getStores,
+  });
+  
+  const stores = storesData?.stores || [];
+  const activeStoreId = selectedStore || (stores.length > 0 ? stores[0].id : "");
+
+  const { data: inventoryResponse, isLoading: invLoading, isError } = useQuery({
+    queryKey: ["inventory", activeStoreId],
+    queryFn: () => getInventory(activeStoreId),
+    enabled: !!activeStoreId,
     retry: 1,
   });
+
+  const isLoading = invLoading && !!activeStoreId;
 
   const items = inventoryResponse?.inventory || [];
   const filtered = items.filter((item: any) =>
@@ -62,9 +72,23 @@ export default function Inventory() {
       <div className="flex items-start justify-between">
         <div>
           <p className="data-label mb-1">Stock Levels</p>
-          <h1 className="text-2xl font-bold" style={{ fontFamily: "var(--font-display)", color: "var(--text-primary)" }}>
-            Inventory
-          </h1>
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-bold" style={{ fontFamily: "var(--font-display)", color: "var(--text-primary)" }}>
+              Inventory
+            </h1>
+            {stores.length > 1 && (
+              <select
+                value={activeStoreId}
+                onChange={(e) => setSelectedStore(e.target.value)}
+                className="text-sm rounded px-2 py-1"
+                style={{ background: "var(--bg-elevated)", border: "1px solid var(--border-subtle)", color: "var(--text-primary)", outline: "none" }}
+              >
+                {stores.map((s: any) => (
+                  <option key={s.id} value={s.id}>{s.name}</option>
+                ))}
+              </select>
+            )}
+          </div>
         </div>
         {/* Quick stat pills */}
         <div className="flex items-center gap-2">

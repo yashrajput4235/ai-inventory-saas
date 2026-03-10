@@ -128,6 +128,7 @@ exports.verifyOtp = async (req, res) => {
 
 res.json({
   message: "Account verified successfully",
+  role: user.role
 });
 
   } catch (error) {
@@ -205,7 +206,7 @@ exports.loginUser=async(req,res)=>{
             sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
             maxAge: 24 * 60 * 60 * 1000, //// 1 day
         })
-        res.json({message:"Login successful"});
+        res.json({message:"Login successful", role: user.role});
     }
     catch(error){
         console.error(error);

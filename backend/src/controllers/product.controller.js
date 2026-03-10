@@ -1,28 +1,65 @@
 const prisma=require("../config/prisma");
 
-exports.createProduct=async(req,res)=>{
-    try{
-        const {name, sku, category, price, cost}=req.body;
-        const organizationId=req.user.organizationId;
-        const product=await prisma.product.create({
-            data:{
-                name,
-                sku,
-                category,
-                price,
-                cost,
-                organizationId,
-            },
+exports.createProduct = async (req, res) => {
+    try {
+        const { name, sku, category, price, cost, quantity, storeId } = req.body;
+        const organizationId = req.user.organizationId;
+        
+        const result = await prisma.$transaction(async (tx) => {
+            const product = await tx.product.create({
+                data: {
+                    name,
+                    sku,
+                    category,
+                    price,
+                    cost,
+                    organizationId,
+                },
+            });
+
+            if (quantity && Number(quantity) > 0) {
+                // If no storeId provided, optionally try to get the first store of org
+                let targetStoreId = storeId;
+                if (!targetStoreId) {
+                    const firstStore = await tx.store.findFirst({ where: { organizationId } });
+                    if (firstStore) targetStoreId = firstStore.id;
+                }
+
+                if (targetStoreId) {
+                    await tx.inventory.create({
+                        data: {
+                            storeId: targetStoreId,
+                            productId: product.id,
+                            quantity: Number(quantity),
+                            lowStockThreshold: 10
+                        }
+                    });
+
+                    // Add Ledger entry
+                    await tx.inventoryLedger.create({
+                        data: {
+                            organizationId,
+                            storeId: targetStoreId,
+                            productId: product.id,
+                            changeType: "STOCK_ADD",
+                            quantityChange: Number(quantity),
+                            resultingQty: Number(quantity),
+                            createdBy: req.user.userId || "admin"
+                        }
+                    });
+                }
+            }
+            return product;
         });
+
         res.status(201).json({
-            message:"Product created successfully",
-            product:{
-                id:product.id,
-                name:product.name,
-                sku:product.sku,
-                price:product.price,
-                category:product.category
-                
+            message: "Product created successfully",
+            product: {
+                id: result.id,
+                name: result.name,
+                sku: result.sku,
+                price: result.price,
+                category: result.category
             },
         });
     }
@@ -53,6 +90,7 @@ exports.getProducts=async(req,res)=>{
                 sku:true,
                 category:true,
                 price:true,
+                cost:true,
                 createdAt:true,
             },
             orderBy:{

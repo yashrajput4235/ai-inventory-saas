@@ -24,7 +24,8 @@ export default function VerifyOTP() {
 
   const verifyMutation = useMutation({
     mutationFn: verifyOtp,
-    onSuccess: () => {
+    onSuccess: (data) => {
+      if (data?.role) localStorage.setItem("userRole", data.role);
       // Automatically login or direct to dashboard depending on token setup
       navigate("/dashboard");
     },

@@ -61,7 +61,10 @@ export default function DashboardLayout() {
 
   const logoutMutation = useMutation({
     mutationFn: logoutUser,
-    onSuccess: () => navigate("/auth/login"),
+    onSuccess: () => {
+      localStorage.removeItem("userRole");
+      navigate("/auth/login");
+    },
     onError: () => navigate("/auth/login"),
   });
 

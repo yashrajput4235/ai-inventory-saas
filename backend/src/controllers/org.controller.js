@@ -32,8 +32,6 @@ exports.registerAdmin = async (req, res) => {
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    const otp = generateOtp();
-    const otpExpiry = new Date(Date.now() + 10 * 60 * 1000);
 
     // 🔥 Transaction starts
     const result = await prisma.$transaction(async (tx) => {
@@ -50,19 +48,30 @@ exports.registerAdmin = async (req, res) => {
           password: hashedPassword,
           role: "admin",
           organizationId: organization.id,
-          otp,
-          otpExpiry,
+          isVerified: true,
         },
       });
 
       return { organization, adminUser };
     });
 
-    // Send OTP (outside transaction)
-    await sendEmail(email, "Verify Your Account", `Your OTP is: ${otp}`);
+    const jwt = require("jsonwebtoken");
+    const token = jwt.sign(
+      { userId: result.adminUser.id, role: result.adminUser.role },
+      process.env.JWT_SECRET,
+      { expiresIn: "1d" }
+    );
+
+    res.cookie("token", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
+      maxAge: 24 * 60 * 60 * 1000, // 1 day
+    });
 
     res.status(201).json({
-      message: "Organization and admin created. Verify OTP.",
+      message: "Organization and admin created.",
+      role: result.adminUser.role
     });
 
   } catch (error) {
@@ -102,8 +111,6 @@ exports.addStoreManager = async (req, res) => {
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    const otp = generateOtp();
-    const otpExpiry = new Date(Date.now() + 10 * 60 * 1000);
 
     // 🔥 Transaction starts
     const result = await prisma.$transaction(async (tx) => {
@@ -114,8 +121,7 @@ exports.addStoreManager = async (req, res) => {
           password: hashedPassword,
           role: "manager",
           organizationId: adminOrganizationId,
-          otp,
-          otpExpiry,
+          isVerified: true,
         },
       });
 
@@ -129,11 +135,9 @@ exports.addStoreManager = async (req, res) => {
       return managerUser;
     });
 
-    // Send OTP
-    await sendEmail(email, "Verify Your Manager Account", `Your OTP is: ${otp}`);
-
     res.status(201).json({
-      message: "Store manager created and assigned. Verify OTP.",
+      message: "Store manager created and assigned.",
+      role: "manager"
     });
 
   } catch (error) {

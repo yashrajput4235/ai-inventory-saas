@@ -39,9 +39,10 @@ export default function Register() {
   const registerMutation = useMutation({
     mutationFn: registerOrgAdmin,
     onSuccess: (data, variables) => {
-      // The backend returns success and sends an OTP.
+      // The backend returns success and directly logs the admin in now.
       console.log("Registered Org Admin:", data);
-      navigate("/auth/verify-otp", { state: { email: variables.email } });
+      localStorage.setItem("userRole", data.role || "admin");
+      navigate("/dashboard");
     },
     onError: (error) => {
       console.error("Registration failed:", error);

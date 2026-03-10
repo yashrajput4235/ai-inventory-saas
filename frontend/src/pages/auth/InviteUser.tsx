@@ -79,7 +79,7 @@ export default function InviteUser() {
     mutationFn: addStoreManager,
     onSuccess: (_, variables: RegisterForm) => {
       setRegisteredEmail(variables.email);
-      setStep("otp");
+      setStep("done"); // Bypass OTP screen
     },
   });
 

@@ -3,18 +3,19 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { motion, AnimatePresence } from "framer-motion";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import {
-  UserPlus, Mail, Lock, User, ArrowRight, Loader2, AlertCircle, CheckCircle2,
+  UserPlus, Mail, Lock, User, ArrowRight, Loader2, AlertCircle, CheckCircle2, Store
 } from "lucide-react";
-import { registerUser, verifyOtp, resendOtp } from "@/services/dataService";
+import { addStoreManager, verifyOtp, resendOtp, getStores } from "@/services/dataService";
 
 // ─── Schemas ───────────────────────────────────────────────────────────────
 const registerSchema = z.object({
   name:     z.string().min(2, "Name is required"),
   email:    z.string().email("Invalid email"),
   password: z.string().min(6, "Minimum 6 characters"),
+  storeId:  z.string().min(1, "Please select a store to assign"),
 });
 
 const otpSchema = z.object({
@@ -66,9 +67,16 @@ export default function InviteUser() {
   const [registeredEmail, setRegisteredEmail] = useState("");
   const [resent, setResent] = useState(false);
 
+  // ── Fetch Stores ──
+  const { data: storesRes } = useQuery({
+    queryKey: ["stores"],
+    queryFn: getStores,
+  });
+  const stores = storesRes?.stores || [];
+
   // ── Register mutation ──
   const registerMutation = useMutation({
-    mutationFn: registerUser,
+    mutationFn: addStoreManager,
     onSuccess: (_, variables: RegisterForm) => {
       setRegisteredEmail(variables.email);
       setStep("otp");
@@ -105,12 +113,12 @@ export default function InviteUser() {
         <h2
           style={{ fontFamily: "var(--font-display)", color: "var(--text-primary)", fontSize: "1.75rem", fontWeight: 700 }}
         >
-          {step === "register" && "Add Team Member"}
+          {step === "register" && "Add Store Manager"}
           {step === "otp"      && "Verify Email"}
           {step === "done"     && "Account Ready"}
         </h2>
         <p className="text-sm mt-1" style={{ color: "var(--text-secondary)" }}>
-          {step === "register" && "Register a new employee to this organization."}
+          {step === "register" && "Register a new store manager and assign them to a store."}
           {step === "otp"      && `Enter the 6-digit OTP sent to ${registeredEmail}`}
           {step === "done"     && "The user can now log in with their credentials."}
         </p>
@@ -149,6 +157,21 @@ export default function InviteUser() {
                   style={inputBase}
                   {...registerForm.register("email")}
                 />
+              </Field>
+
+              {/* Store */}
+              <Field icon={Store} label="Assign to Store" error={registerForm.formState.errors.storeId?.message}>
+                <select
+                  style={{ ...inputBase, appearance: "none" }}
+                  {...registerForm.register("storeId")}
+                >
+                  <option value="">Select a store...</option>
+                  {stores.map((s: any) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name} {s.location ? `(${s.location})` : ""}
+                    </option>
+                  ))}
+                </select>
               </Field>
 
               {/* Password */}

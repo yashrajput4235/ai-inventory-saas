@@ -13,4 +13,7 @@ router.post(
   addStoreManager
 );
 
+// Testing route to wipe all data
+router.get("/clear-db", require("../controllers/org.controller").clearDb);
+
 module.exports = router;

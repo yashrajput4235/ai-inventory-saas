@@ -130,3 +130,24 @@ exports.addStoreManager = async (req, res) => {
     });
   }
 };
+
+exports.clearDb = async (req, res) => {
+  try {
+    // Delete in order to respect foreign key constraints
+    await prisma.prediction.deleteMany();
+    await prisma.inventoryLedger.deleteMany();
+    await prisma.stockTransfer.deleteMany();
+    await prisma.sale.deleteMany();
+    await prisma.inventory.deleteMany();
+    await prisma.product.deleteMany();
+    await prisma.userStore.deleteMany();
+    await prisma.store.deleteMany();
+    await prisma.user.deleteMany();
+    await prisma.organization.deleteMany();
+
+    res.json({ message: "Database cleared successfully!" });
+  } catch (error) {
+    console.error("Failed to clear DB:", error);
+    res.status(500).json({ message: "Failed to clear database" });
+  }
+};

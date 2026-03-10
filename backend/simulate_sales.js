@@ -1,7 +1,7 @@
 const { PrismaClient } = require("./src/generated/prisma");
 const prisma = new PrismaClient();
 
-const ORG_ID = "7787d6bc-85cf-4bb3-9cef-6ca13755ab5b";
+const ORG_ID = "b3f49293-78a4-4d80-8786-ba8b7e08f808";
 
 async function main() {
   console.log("Fetching products and stores...");

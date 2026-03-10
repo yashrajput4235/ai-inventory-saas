@@ -1,10 +1,10 @@
 const { PrismaClient } = require("./src/generated/prisma");
 const prisma = new PrismaClient();
 
-const ORG_ID = "7787d6bc-85cf-4bb3-9cef-6ca13755ab5b";
+const ORG_ID = "b3f49293-78a4-4d80-8786-ba8b7e08f808";
 const STORES = {
-  JAIPUR: "7f09b130-9863-4748-bff4-5ab767c9c185",
-  DELHI: "a517038b-97c7-417b-a2a2-f883daf6081f"
+  JAIPUR: "012973f0-5253-4753-b951-99354e33fe06", // Using Main Branch for Jaipur test
+  DELHI: "012973f0-5253-4753-b951-99354e33fe06"   // Using Main Branch for Delhi test
 };
 
 const AI_IDS = [

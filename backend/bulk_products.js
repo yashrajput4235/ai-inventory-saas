@@ -1,11 +1,9 @@
 const { PrismaClient } = require("./src/generated/prisma");
 const prisma = new PrismaClient();
 
-const ORG_ID = "7787d6bc-85cf-4bb3-9cef-6ca13755ab5b";
+const ORG_ID = "b3f49293-78a4-4d80-8786-ba8b7e08f808";
 const STORES = [
-  "7f09b130-9863-4748-bff4-5ab767c9c185", // Jaipur
-  "a517038b-97c7-417b-a2a2-f883daf6081f", // Delhi
-  "53629fcc-b141-4f71-8b45-2710e70d5c6a"  // Test Branch B
+  "012973f0-5253-4753-b951-99354e33fe06" // Main Branch (Render)
 ];
 
 const CATEGORIES = ["Electronics", "Home & Kitchen", "Apparel", "Sports", "Books", "Office Supplies"];

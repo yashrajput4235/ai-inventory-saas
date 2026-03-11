@@ -25,9 +25,17 @@ const app = express();
 app.set('trust proxy', 1);
 
 // CORS (important for cookies)
-const allowedOrigins = process.env.FRONTEND_URL 
-  ? process.env.FRONTEND_URL.split(",") 
-  : ["http://localhost:3000", "http://localhost:5173", "http://localhost:5174"];
+const allowedOrigins = [
+  "http://localhost:3000", 
+  "http://localhost:5173", 
+  "http://localhost:5174",
+  "https://ai-inventory-saas.vercel.app"
+];
+
+if (process.env.FRONTEND_URL) {
+  const envOrigins = process.env.FRONTEND_URL.split(",").map(url => url.trim());
+  allowedOrigins.push(...envOrigins);
+}
 
 app.use(cors({
   origin: allowedOrigins,

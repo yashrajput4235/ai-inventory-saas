@@ -1,16 +1,31 @@
+import { useState } from "react";
 import { motion } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
-import { AlertCircle, AlertTriangle, ArrowRight, PackageX, TrendingUp } from "lucide-react";
+import { AlertCircle, AlertTriangle, ArrowRight, PackageX, TrendingUp, Building2 } from "lucide-react";
 
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { getAlerts } from "@/services/dataService";
+import { getAlerts, getStores } from "@/services/dataService";
 
 export default function Alerts() {
+  const userRole = localStorage.getItem("userRole");
+  const isAdmin = userRole === "admin";
+  const [selectedStore, setSelectedStore] = useState<string>("ALL");
+
+  // Only fetch stores list if the user is an admin
+  const { data: storesData } = useQuery({
+    queryKey: ["stores"],
+    queryFn: getStores,
+    enabled: isAdmin
+  });
+  const stores = storesData?.stores || [];
+
+  const apiStoreId = selectedStore === "ALL" ? undefined : selectedStore;
+
   const { data: alertsData, isLoading, isError } = useQuery({
-    queryKey: ['aiAlerts'],
-    queryFn: getAlerts,
+    queryKey: ['aiAlerts', apiStoreId],
+    queryFn: () => getAlerts(apiStoreId),
   });
 
   const alerts = alertsData?.alert || [];
@@ -24,11 +39,29 @@ export default function Alerts() {
     >
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight text-red-600 dark:text-red-500">Low Stock Alerts</h2>
+          <h2 className="text-3xl font-bold tracking-tight text-red-600 dark:text-red-500">
+            {isAdmin && selectedStore === "ALL" ? "Global Low Stock Alerts" : "Low Stock Alerts"}
+          </h2>
           <p className="text-muted-foreground mt-1">
             Items where AI-predicted demand exceeds your current inventory stock.
           </p>
         </div>
+        
+        {isAdmin && stores.length > 0 && (
+          <div className="flex items-center gap-2 bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-md px-3 py-2 shadow-sm">
+            <Building2 className="w-4 h-4 text-gray-500" />
+            <select
+              value={selectedStore}
+              onChange={(e) => setSelectedStore(e.target.value)}
+              className="text-sm bg-transparent border-none outline-none cursor-pointer focus:ring-0 text-gray-700 dark:text-gray-300 font-medium"
+            >
+              <option value="ALL">All Stores</option>
+              {stores.map((s: any) => (
+                <option key={s.id} value={s.id}>{s.name}</option>
+              ))}
+            </select>
+          </div>
+        )}
       </div>
 
       {isError ? (
@@ -59,20 +92,28 @@ export default function Alerts() {
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {alerts.map((alert: any, index: number) => {
              const deficit = alert.predicted_demand - alert.current_stock;
-             const isCritical = deficit > 20; // Example critical threshold
+             const isCritical = deficit > 20;
              
              return (
                <motion.div
-                 key={index}
+                 key={`${alert.series_id}-${alert.storeId || index}`}
                  initial={{ opacity: 0, scale: 0.95 }}
                  animate={{ opacity: 1, scale: 1 }}
                  transition={{ delay: index * 0.05 }}
                >
-                 <Card className={`border-l-4 ${isCritical ? 'border-l-red-500' : 'border-l-amber-500'} hover:shadow-md transition-shadow relative overflow-hidden`}>
+                 <Card className={`border-l-4 ${isCritical ? 'border-l-red-500' : 'border-l-amber-500'} hover:shadow-md transition-shadow relative overflow-hidden h-full flex flex-col`}>
                     <div className="absolute right-0 top-0 w-24 h-24 bg-gradient-to-bl from-red-500/10 to-transparent rounded-bl-full pointer-events-none" />
+                    
                     <CardHeader className="pb-2">
                        <CardTitle className="flex justify-between items-start text-lg">
-                         <span className="truncate pr-2">{alert.series_id || "Unknown Product"}</span>
+                         <div className="flex flex-col truncate pr-2 gap-1">
+                           <span className="truncate">{alert.series_id || "Unknown Product"}</span>
+                           {isAdmin && alert.storeName && (
+                             <span className="text-xs font-mono text-gray-500 flex items-center gap-1">
+                               <Building2 className="w-3 h-3" /> {alert.storeName}
+                             </span>
+                           )}
+                         </div>
                          {isCritical ? (
                            <span className="flex items-center gap-1 text-xs font-bold bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 px-2 py-1 rounded-md shrink-0">
                              <PackageX className="w-3 h-3" /> CRITICAL
@@ -83,9 +124,9 @@ export default function Alerts() {
                            </span>
                          )}
                        </CardTitle>
-                       <CardDescription className="text-xs font-mono">ID: {alert.series_id}</CardDescription>
                     </CardHeader>
-                    <CardContent className="space-y-4">
+                    
+                    <CardContent className="space-y-4 flex-1 flex flex-col justify-end">
                        <div className="flex justify-between items-end bg-gray-50 dark:bg-zinc-900/50 p-3 rounded-lg border border-gray-100 dark:border-zinc-800">
                           <div>
                             <p className="text-xs text-gray-500 font-medium mb-1">Current Stock</p>

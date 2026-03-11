@@ -1,4 +1,5 @@
-import { RefreshCcw, TrendingUp, AlertCircle } from "lucide-react";
+import { useState } from "react";
+import { RefreshCcw, TrendingUp, AlertCircle, Building2 } from "lucide-react";
 import { motion } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
 
@@ -14,12 +15,26 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { getReorderRecommendations } from "@/services/dataService";
+import { getReorderRecommendations, getStores } from "@/services/dataService";
 
 export default function Reorder() {
+  const userRole = localStorage.getItem("userRole");
+  const isAdmin = userRole === "admin";
+  const [selectedStore, setSelectedStore] = useState<string>("ALL");
+
+  // Only fetch stores list if the user is an admin
+  const { data: storesData } = useQuery({
+    queryKey: ["stores"],
+    queryFn: getStores,
+    enabled: isAdmin
+  });
+  const stores = storesData?.stores || [];
+
+  const apiStoreId = selectedStore === "ALL" ? undefined : selectedStore;
+
   const { data: reorderResponse, isLoading, isError, refetch } = useQuery({
-    queryKey: ['reorder'],
-    queryFn: () => getReorderRecommendations(),
+    queryKey: ['reorder', apiStoreId],
+    queryFn: () => getReorderRecommendations(apiStoreId),
   });
 
   const reorderData = reorderResponse?.recommendations || [];
@@ -50,19 +65,40 @@ export default function Reorder() {
     >
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">Smart Reorder Engine</h2>
+          <h2 className="text-3xl font-bold tracking-tight">
+            {isAdmin && selectedStore === "ALL" ? "Global Smart Reorder Engine" : "Smart Reorder Engine"}
+          </h2>
           <p className="text-muted-foreground mt-1">
             AI-driven recommendations based on forecasted demand and current stock levels.
           </p>
         </div>
-        <Button 
-          className="bg-indigo-600 hover:bg-indigo-700 text-white gap-2"
-          onClick={() => refetch()}
-          disabled={isLoading}
-        >
-          <RefreshCcw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
-          {isLoading ? 'Regenerating...' : 'Regenerate Plan'}
-        </Button>
+        
+        <div className="flex items-center gap-3">
+          {isAdmin && stores.length > 0 && (
+            <div className="flex items-center gap-2 bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-md px-3 py-2 shadow-sm h-10">
+              <Building2 className="w-4 h-4 text-gray-500" />
+              <select
+                value={selectedStore}
+                onChange={(e) => setSelectedStore(e.target.value)}
+                className="text-sm bg-transparent border-none outline-none cursor-pointer focus:ring-0 text-gray-700 dark:text-gray-300 font-medium"
+              >
+                <option value="ALL">All Stores</option>
+                {stores.map((s: any) => (
+                  <option key={s.id} value={s.id}>{s.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          <Button 
+            className="bg-indigo-600 hover:bg-indigo-700 text-white gap-2 h-10"
+            onClick={() => refetch()}
+            disabled={isLoading}
+          >
+            <RefreshCcw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+            {isLoading ? 'Regenerating...' : 'Regenerate Plan'}
+          </Button>
+        </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">
@@ -118,6 +154,7 @@ export default function Reorder() {
             <TableHeader className="bg-gray-50/50 dark:bg-zinc-900/50">
               <TableRow>
                 <TableHead className="pl-6">Product (Series ID)</TableHead>
+                {isAdmin && <TableHead>Location</TableHead>}
                 <TableHead className="text-right text-indigo-600 dark:text-indigo-400 font-semibold">
                   Predicted Demand (7d)
                 </TableHead>
@@ -135,6 +172,7 @@ export default function Reorder() {
                 Array.from({ length: 4 }).map((_, i) => (
                   <TableRow key={i}>
                     <TableCell className="pl-6"><Skeleton className="h-5 w-40" /></TableCell>
+                    {isAdmin && <TableCell><Skeleton className="h-5 w-24" /></TableCell>}
                     <TableCell><Skeleton className="h-5 w-16 ml-auto" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-16 ml-auto" /></TableCell>
                     <TableCell><Skeleton className="h-4 w-12 ml-auto" /></TableCell>
@@ -144,7 +182,7 @@ export default function Reorder() {
                 ))
               ) : reorderData.length === 0 ? (
                 <TableRow>
-                   <TableCell colSpan={6} className="h-32 text-center text-muted-foreground">
+                   <TableCell colSpan={isAdmin ? 7 : 6} className="h-32 text-center text-muted-foreground">
                      No reorder recommendations at this time. Stock is healthy!
                    </TableCell>
                 </TableRow>
@@ -152,13 +190,20 @@ export default function Reorder() {
                 reorderData.map((item: any, i: number) => {
                   const isCritical = item.current_stock < (item.predicted_demand * 0.3);
                   return (
-                    <TableRow key={i} className="hover:bg-gray-50/50 dark:hover:bg-zinc-800/20">
+                    <TableRow key={`${item.series_id}-${item.storeId || i}`} className="hover:bg-gray-50/50 dark:hover:bg-zinc-800/20">
                       <TableCell className="font-medium pl-6">
                         <span className="truncate block max-w-[200px]" title={item.series_id}>{item.series_id}</span>
                         {isCritical && (
                           <Badge variant="destructive" className="mt-1 h-5 bg-red-500/10 text-red-600 hover:bg-red-500/20 border-none px-1.5 text-[10px]">Urgent</Badge>
                         )}
                       </TableCell>
+                      
+                      {isAdmin && (
+                        <TableCell className="text-xs font-mono text-gray-500">
+                          {item.storeName}
+                        </TableCell>
+                      )}
+                      
                       <TableCell className="text-right text-indigo-600 dark:text-indigo-400 font-semibold text-lg">
                         {item.predicted_demand}
                       </TableCell>

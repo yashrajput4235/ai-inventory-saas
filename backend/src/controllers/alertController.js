@@ -3,14 +3,26 @@ const prisma = require("../config/prisma");
 exports.getLowStockAlerts = async (req, res) => {
   try {
     const { id: userId, role, organizationId } = req.user;
+    const requestedStoreId = req.query.storeId;
 
-    let storeIds = [];
+    let allowedStoreIds = [];
     if (role === "admin") {
       const stores = await prisma.store.findMany({ where: { organizationId }, select: { id: true } });
-      storeIds = stores.map(s => s.id);
+      allowedStoreIds = stores.map(s => s.id);
     } else {
       const userStores = await prisma.userStore.findMany({ where: { userId }, select: { storeId: true } });
-      storeIds = userStores.map(us => us.storeId);
+      allowedStoreIds = userStores.map(us => us.storeId);
+    }
+
+    // Determine final store IDs to query
+    let storeIds = [];
+    if (requestedStoreId) {
+      if (!allowedStoreIds.includes(requestedStoreId)) {
+        return res.status(403).json({ success: false, message: "Unauthorized access to this store" });
+      }
+      storeIds = [requestedStoreId];
+    } else {
+      storeIds = allowedStoreIds;
     }
 
     if (storeIds.length === 0) {
@@ -20,7 +32,10 @@ exports.getLowStockAlerts = async (req, res) => {
     const predictions = await prisma.prediction.findMany({
       where: { storeId: { in: storeIds } },
       orderBy: { predictionDate: 'desc' },
-      include: { product: true }
+      include: { 
+        product: true,
+        store: true  // INCLUDE STORE FOR ENRICHMENT
+      }
     });
 
     const latestMap = new Map();
@@ -44,6 +59,8 @@ exports.getLowStockAlerts = async (req, res) => {
         series_id: p.product.name,
         predicted_demand: p.predictedDemand,
         current_stock: currentStock,
+        storeId: p.storeId,
+        storeName: p.store?.name || "Unknown Store"
       };
     }).filter(a => a.predicted_demand > a.current_stock).slice(0, 50);
 

@@ -233,3 +233,37 @@ exports.updateThreshold=async(req,res)=>{
     });
   }     
 }
+
+exports.getOrgInventory = async (req, res) => {
+  try {
+    const { organizationId } = req.user;
+
+    const inventory = await prisma.inventory.findMany({
+      where: {
+        store: {
+          organizationId
+        }
+      },
+      include: {
+        store: {
+          select: {
+            name: true,
+            location: true,
+          }
+        },
+        product: {
+          select: {
+            name: true,
+            sku: true,
+            price: true,
+          }
+        }
+      }
+    });
+
+    res.json({ inventory });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Failed to fetch organization inventory" });
+  }
+};

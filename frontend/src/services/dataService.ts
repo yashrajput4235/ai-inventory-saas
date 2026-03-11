@@ -108,6 +108,11 @@ export const getInventory = async (storeId: string) => {
   return response.data;
 };
 
+export const getOrgInventory = async () => {
+  const response = await api.get("/inventory/org");
+  return response.data;
+};
+
 // Store Management
 export const createStore = async (data: any) => {
   const response = await api.post("/stores", data);
@@ -136,13 +141,15 @@ export const getOrgDashboardPredictions = async () => {
   return response.data;
 };
 
-export const getReorderRecommendations = async () => {
-  const response = await api.get("/reorder");
+export const getReorderRecommendations = async (storeId?: string) => {
+  const url = storeId ? `/reorder?storeId=${storeId}` : "/reorder";
+  const response = await api.get(url);
   return response.data;
 };
 
-export const getAlerts = async () => {
-  const response = await api.get("/alerts");
+export const getAlerts = async (storeId?: string) => {
+  const url = storeId ? `/alerts?storeId=${storeId}` : "/alerts";
+  const response = await api.get(url);
   return response.data;
 };
 

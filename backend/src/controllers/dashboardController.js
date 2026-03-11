@@ -74,7 +74,10 @@ exports.getOrgDashboard = async (req, res) => {
     const predictions = await prisma.prediction.findMany({
       where: { storeId: { in: storeIds } },
       orderBy: { predictionDate: 'desc' },
-      include: { product: true }
+      include: { 
+        product: true,
+        store: true 
+      }
     });
 
     const latestMap = new Map();
@@ -100,7 +103,9 @@ exports.getOrgDashboard = async (req, res) => {
         date: p.predictionDate,
         predicted_demand: p.predictedDemand,
         current_stock: currentStock,
-        recommended_order: p.recommendedStock > currentStock ? (p.recommendedStock - currentStock) : 0
+        recommended_order: p.recommendedStock > currentStock ? (p.recommendedStock - currentStock) : 0,
+        storeId: p.storeId,
+        storeName: p.store?.name || "Unknown Store"
       };
     }).sort((a,b) => b.predicted_demand - a.predicted_demand).slice(0, 20);
 

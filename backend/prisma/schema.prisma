@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
   output   = "../src/generated/prisma"
@@ -14,138 +8,109 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// make a user model
 model User {
-  id               String   @id @default(uuid())
+  id               String       @id @default(uuid())
   name             String
-  email            String   @unique
+  email            String       @unique
   password         String
-  role             String   @default("manager")
-  isVerified       Boolean  @default(false)
-
-  // 🔐 Auth Fields
+  createdAt        DateTime     @default(now())
+  isVerified       Boolean      @default(false)
   otp              String?
   otpExpiry        DateTime?
-  otpAttempts      Int      @default(0)
-  otpBlockedUntil  DateTime?
   resetToken       String?
   resetTokenExpiry DateTime?
-
-  // 🏢 Multi-tenant Field
+  role             String       @default("manager")
+  otpAttempts      Int          @default(0)
+  otpBlockedUntil  DateTime?
   organizationId   String
   organization     Organization @relation(fields: [organizationId], references: [id])
-
-  // 🔗 Store Mapping
   userStores       UserStore[]
-
-  createdAt        DateTime @default(now())
 }
 
 model Organization {
-  id        String   @id @default(uuid())
-  name      String
-  createdAt DateTime @default(now())
-
-  stores    Store[]
-  users     User[]
-  products  Product[]
-  sales     Sale[]      // ✅ ADD THIS
+  id               String            @id @default(uuid())
+  name             String
+  createdAt        DateTime          @default(now())
   inventoryLedgers InventoryLedger[]
-  predictions Prediction[]
+  predictions      Prediction[]
+  products         Product[]
+  sales            Sale[]
+  stores           Store[]
+  users            User[]
 }
 
 model Store {
-  id              String   @id @default(uuid())
-  name            String
-  location        String?
-  organizationId  String
-  createdAt       DateTime @default(now())
-
-  organization    Organization @relation(fields: [organizationId], references: [id])
-
-  inventory       Inventory[]
-  sales           Sale[]
-  transfersFrom   StockTransfer[] @relation("FromStore")
-  transfersTo     StockTransfer[] @relation("ToStore")
-
-  userStores      UserStore[]
-  predictions     Prediction[]
-
-  inventoryLedgers InventoryLedger[]   // ✅ ADDED
+  id               String            @id @default(uuid())
+  name             String
+  location         String?
+  organizationId   String
+  createdAt        DateTime          @default(now())
+  inventory        Inventory[]
+  inventoryLedgers InventoryLedger[]
+  predictions      Prediction[]
+  sales            Sale[]
+  transfersFrom    StockTransfer[]   @relation("FromStore")
+  transfersTo      StockTransfer[]   @relation("ToStore")
+  organization     Organization      @relation(fields: [organizationId], references: [id])
+  userStores       UserStore[]
 }
 
-
-
 model UserStore {
-  id       String @id @default(uuid())
-  userId   String
-  storeId  String
-
-  user     User  @relation(fields: [userId], references: [id])
-  store    Store @relation(fields: [storeId], references: [id])
+  id      String @id @default(uuid())
+  userId  String
+  storeId String
+  store   Store  @relation(fields: [storeId], references: [id])
+  user    User   @relation(fields: [userId], references: [id])
 
   @@unique([userId, storeId])
 }
 
 model Product {
-  id              String   @id @default(uuid())
-  name            String
-  sku             String
-  category        String?
-  price           Float
-  cost            Float?
-  organizationId  String
-  createdAt       DateTime @default(now())
-
-  organization    Organization @relation(fields: [organizationId], references: [id])
-  inventory       Inventory[]
-  sales           Sale[]
-  predictions     Prediction[]
+  id               String            @id @default(uuid())
+  name             String
+  sku              String
+  category         String?
+  price            Float
+  cost             Float?
+  organizationId   String
+  createdAt        DateTime          @default(now())
+  inventory        Inventory[]
   inventoryLedgers InventoryLedger[]
-  
+  predictions      Prediction[]
+  organization     Organization      @relation(fields: [organizationId], references: [id])
+  sales            Sale[]
 
-  @@unique([organizationId, sku])   // IMPORTANT
+  @@unique([organizationId, sku])
 }
 
 model Inventory {
-  id        String   @id @default(uuid())
-  storeId   String
-  productId String
-  quantity  Int      @default(0)
-  lowStockThreshold Int @default(10)
-  updatedAt DateTime @updatedAt
-
-  store     Store   @relation(fields: [storeId], references: [id])
-  product   Product @relation(fields: [productId], references: [id])
+  id                String   @id @default(uuid())
+  storeId           String
+  productId         String
+  quantity          Int      @default(0)
+  updatedAt         DateTime @updatedAt
+  lowStockThreshold Int      @default(10)
+  product           Product  @relation(fields: [productId], references: [id])
+  store             Store    @relation(fields: [storeId], references: [id])
 
   @@unique([storeId, productId])
 }
 
 model Sale {
-  id              String   @id @default(uuid())
-
-  // 🔐 Multi-tenant boundary
-  organizationId  String
-  organization    Organization @relation(fields: [organizationId], references: [id])
-
-  // 🏬 Store info
-  storeId         String
-  store           Store   @relation(fields: [storeId], references: [id])
-
-  // 📦 Product info
-  productId       String
-  product         Product @relation(fields: [productId], references: [id])
-
-  // 📊 Sale data
-  quantity        Int
-  priceAtSale     Float
-  costAtSale      Float?
-  totalAmount     Float
-  profit          Float?
-
-  // 🕒 Timestamps
-  soldAt          DateTime
-  createdAt       DateTime @default(now())
+  id             String       @id @default(uuid())
+  organizationId String
+  storeId        String
+  productId      String
+  quantity       Int
+  priceAtSale    Float
+  totalAmount    Float
+  costAtSale     Float?
+  profit         Float?
+  soldAt         DateTime
+  createdAt      DateTime     @default(now())
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  product        Product      @relation(fields: [productId], references: [id])
+  store          Store        @relation(fields: [storeId], references: [id])
 
   @@index([organizationId])
   @@index([storeId])
@@ -153,23 +118,19 @@ model Sale {
 }
 
 model InventoryLedger {
-  id              String   @id @default(uuid())
-
-  organizationId  String
-  storeId         String
-  productId       String
-
-  changeType      String   // STOCK_ADD, SALE, TRANSFER_IN, TRANSFER_OUT
-  quantityChange  Int      // signed (+ / -)
-  resultingQty    Int
-
-  referenceId     String?  // saleId / transferId
-  createdBy       String   // userId
-  createdAt       DateTime @default(now())
-
-  organization    Organization @relation(fields: [organizationId], references: [id])
-  store           Store        @relation(fields: [storeId], references: [id])
-  product         Product      @relation(fields: [productId], references: [id])
+  id             String       @id @default(uuid())
+  organizationId String
+  storeId        String
+  productId      String
+  changeType     String
+  quantityChange Int
+  resultingQty   Int
+  referenceId    String?
+  createdBy      String
+  createdAt      DateTime     @default(now())
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  product        Product      @relation(fields: [productId], references: [id])
+  store          Store        @relation(fields: [storeId], references: [id])
 
   @@index([organizationId])
   @@index([storeId])
@@ -177,38 +138,33 @@ model InventoryLedger {
 }
 
 model StockTransfer {
-  id              String   @id @default(uuid())
-  organizationId  String
-  fromStoreId     String
-  toStoreId       String
-  productId       String
-  quantity        Int
-  status          String   @default("pending")
-  requestedAt     DateTime @default(now())
-  completedAt     DateTime?
-
-  fromStore       Store   @relation("FromStore", fields: [fromStoreId], references: [id])
-  toStore         Store   @relation("ToStore", fields: [toStoreId], references: [id])
+  id             String    @id @default(uuid())
+  organizationId String
+  fromStoreId    String
+  toStoreId      String
+  productId      String
+  quantity       Int
+  status         String    @default("pending")
+  requestedAt    DateTime  @default(now())
+  completedAt    DateTime?
+  fromStore      Store     @relation("FromStore", fields: [fromStoreId], references: [id])
+  toStore        Store     @relation("ToStore", fields: [toStoreId], references: [id])
 }
 
 model Prediction {
-  id               String   @id @default(uuid())
+  id               String       @id @default(uuid())
   organizationId   String
   storeId          String
   productId        String
-
   predictedDemand  Int
   recommendedStock Int
-
+  predictionDate   DateTime
   modelVersion     String
   confidenceScore  Float?
-  predictionDate   DateTime
-
-  createdAt        DateTime @default(now())
-
-  store            Store        @relation(fields: [storeId], references: [id])
-  product          Product      @relation(fields: [productId], references: [id])
+  createdAt        DateTime     @default(now())
   organization     Organization @relation(fields: [organizationId], references: [id])
+  product          Product      @relation(fields: [productId], references: [id])
+  store            Store        @relation(fields: [storeId], references: [id])
 
   @@unique([storeId, productId, predictionDate])
 }

@@ -3,7 +3,7 @@ const prisma = require("../config/prisma");
 exports.addStock = async (req, res) => {
   try {
     const { storeId, productId, quantity } = req.body;
-    const { userId, role, organizationId } = req.user;
+    const { id: userId, role, organizationId } = req.user;
 
     if (quantity <= 0) {
       return res.status(400).json({
@@ -141,7 +141,7 @@ exports.getStoreInventory = async (req, res) => {
 exports.updateThreshold=async(req,res)=>{
   try{
     const {storeId,productId,lowStockThreshold}=req.body;
-    const { userId, role, organizationId } = req.user;
+    const { id: userId, role, organizationId } = req.user;
     // validate threshold
     if(lowStockThreshold<0){
       return res.status(400).json({

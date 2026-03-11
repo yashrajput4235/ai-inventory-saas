@@ -3,7 +3,7 @@ const prisma = require("../config/prisma");
 exports.createSale = async (req, res) => {
   try {
     const { storeId, productId, quantity } = req.body;
-    const { userId, role, organizationId } = req.user;
+    const { id: userId, role, organizationId } = req.user;
 
     if (quantity <= 0) {
       return res.status(400).json({

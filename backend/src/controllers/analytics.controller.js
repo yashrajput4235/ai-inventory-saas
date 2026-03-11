@@ -81,7 +81,7 @@ exports.getStoreSummary=async(req,res)=>{
 exports.getTopProducts = async (req, res) => {
   try {
     const { storeId } = req.params;
-    const { userId, role, organizationId } = req.user;
+    const { id: userId, role, organizationId } = req.user;
 
     // Validate store belongs to org
     const store = await prisma.store.findFirst({

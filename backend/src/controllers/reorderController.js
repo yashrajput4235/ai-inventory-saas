@@ -2,7 +2,7 @@ const prisma = require("../config/prisma");
 
 exports.getReorderRecommendations = async (req, res) => {
   try {
-    const { userId, role, organizationId } = req.user;
+    const { id: userId, role, organizationId } = req.user;
 
     let storeIds = [];
     if (role === "admin") {

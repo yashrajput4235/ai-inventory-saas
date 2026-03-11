@@ -44,7 +44,7 @@ exports.createProduct = async (req, res) => {
                             changeType: "STOCK_ADD",
                             quantityChange: Number(quantity),
                             resultingQty: Number(quantity),
-                            createdBy: req.user.userId || "admin"
+                            createdBy: req.user.id || "admin"
                         }
                     });
                 }

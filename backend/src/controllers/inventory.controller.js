@@ -107,7 +107,26 @@ exports.addStock = async (req, res) => {
 exports.getStoreInventory = async (req, res) => {
   try {
     const { storeId } = req.params;
-    const { organizationId } = req.user;
+    const { id: userId, role, organizationId } = req.user;
+
+    // Verify store exists in org
+    const store = await prisma.store.findFirst({
+      where: { id: storeId, organizationId }
+    });
+
+    if (!store) {
+      return res.status(404).json({ message: "Store not found in your organization" });
+    }
+
+    // Role mapping check
+    if (role === "manager") {
+      const mapping = await prisma.userStore.findFirst({
+        where: { userId, storeId }
+      });
+      if (!mapping) {
+        return res.status(403).json({ message: "You are not assigned to this store" });
+      }
+    }
 
     const inventory = await prisma.inventory.findMany({
       where: {

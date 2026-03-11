@@ -5,7 +5,6 @@ import {
   LayoutDashboard,
   Package,
   ShoppingCart,
-  TrendingUp,
   AlertTriangle,
   RefreshCcw,
   Store,

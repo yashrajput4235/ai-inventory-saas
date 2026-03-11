@@ -62,8 +62,18 @@ export const getStoreSummary = async (storeId: string) => {
   return response.data;
 };
 
+export const getOrgSummary = async () => {
+  const response = await api.get("/analytics/org-summary");
+  return response.data;
+};
+
 export const getTopProducts = async (storeId: string) => {
   const response = await api.get(`/analytics/top-products/${storeId}`);
+  return response.data;
+};
+
+export const getOrgTopProducts = async () => {
+  const response = await api.get("/analytics/top-products-org");
   return response.data;
 };
 
@@ -118,6 +128,11 @@ export const recordSale = async (data: any) => {
 // AI & BigQuery
 export const getDashboardPredictions = async () => {
   const response = await api.get("/dashboard");
+  return response.data;
+};
+
+export const getOrgDashboardPredictions = async () => {
+  const response = await api.get("/dashboard/org");
   return response.data;
 };
 

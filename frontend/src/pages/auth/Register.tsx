@@ -38,10 +38,8 @@ export default function Register() {
 
   const registerMutation = useMutation({
     mutationFn: registerOrgAdmin,
-    onSuccess: (data, variables) => {
-      // The backend returns success and directly logs the admin in now.
-      console.log("Registered Org Admin:", data);
-      localStorage.setItem("userRole", data.role || "admin");
+    onSuccess: (data) => {
+      localStorage.setItem("userRole", data?.user?.role || data?.role || "admin");
       navigate("/dashboard");
     },
     onError: (error) => {

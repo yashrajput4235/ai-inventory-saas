@@ -4,6 +4,6 @@ const router=express.Router();
 const {runDailyForecast}=require("../controllers/forecastJobController");
 const {cronAuth} = require("../middleware/cron.middleware");
 
-router.get("/run-forecast", cronAuth, runDailyForecast);
+router.post("/run-forecast", cronAuth, runDailyForecast);
 
 module.exports=router;

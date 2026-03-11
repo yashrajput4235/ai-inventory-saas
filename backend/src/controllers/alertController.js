@@ -1,63 +1,59 @@
-const bigquery = require("../config/bigquery");
 const prisma = require("../config/prisma");
 
 exports.getLowStockAlerts = async (req, res) => {
   try {
     const { userId, role, organizationId } = req.user;
 
-    let validProductIds = [];
-    
+    let storeIds = [];
     if (role === "admin") {
-      const products = await prisma.product.findMany({
-        where: { organizationId },
-        select: { id: true }
-      });
-      validProductIds = products.map(p => p.id);
+      const stores = await prisma.store.findMany({ where: { organizationId }, select: { id: true } });
+      storeIds = stores.map(s => s.id);
     } else {
-      const userStores = await prisma.userStore.findMany({
-        where: { userId },
-        select: { storeId: true }
-      });
-      const storeIds = userStores.map(us => us.storeId);
-      
-      const inventory = await prisma.inventory.findMany({
-        where: { storeId: { in: storeIds } },
-        select: { productId: true }
-      });
-      validProductIds = [...new Set(inventory.map(inv => inv.productId))];
+      const userStores = await prisma.userStore.findMany({ where: { userId }, select: { storeId: true } });
+      storeIds = userStores.map(us => us.storeId);
     }
 
-    if (validProductIds.length === 0) {
+    if (storeIds.length === 0) {
       return res.json({ success: true, alert: [] });
     }
 
-    const productIdList = validProductIds.map(id => `'${id}'`).join(", ");
+    const predictions = await prisma.prediction.findMany({
+      where: { storeId: { in: storeIds } },
+      orderBy: { predictionDate: 'desc' },
+      include: { product: true }
+    });
 
-    const query = `
-      SELECT
-        p.series_id,
-        p.predicted_total_quantity.value AS predicted_demand,
-        i.current_stock
-      FROM \`ai-inventory-forecasting.inventory_warehouse.predictions_2026_03_06T05_36_00_231Z_288\` p
-      JOIN \`ai-inventory-forecasting.inventory_warehouse.inventory_stock\` i
-      ON p.series_id = i.product_id
-      WHERE (p.predicted_total_quantity.value > i.current_stock)
-        AND p.series_id IN (${productIdList})
-      LIMIT 50
-    `;
-      const [rows]=await bigquery.query({query});
-      res.json({
-        success:true,
-        alert:rows
-      })
-     
+    const latestMap = new Map();
+    for (const p of predictions) {
+      const key = `${p.storeId}_${p.productId}`;
+      if (!latestMap.has(key)) latestMap.set(key, p);
     }
-    catch (error) {
-  console.error("ALERT ERROR:", error);
+    const latestPredictions = Array.from(latestMap.values());
 
-  res.status(500).json({
-    success: false,
-    message: error.message
-  });
-}
+    const inventory = await prisma.inventory.findMany({
+      where: { storeId: { in: storeIds } }
+    });
+    const inventoryMap = new Map();
+    for (const inv of inventory) {
+      inventoryMap.set(`${inv.storeId}_${inv.productId}`, inv.quantity);
+    }
+
+    const activeAlerts = latestPredictions.map(p => {
+      const currentStock = inventoryMap.get(`${p.storeId}_${p.productId}`) || 0;
+      return {
+        series_id: p.product.name,
+        predicted_demand: p.predictedDemand,
+        current_stock: currentStock,
+      };
+    }).filter(a => a.predicted_demand > a.current_stock).slice(0, 50);
+
+    res.json({
+      success: true,
+      alert: activeAlerts
+    });
+
+  } catch (error) {
+    console.error("ALERT ERROR:", error);
+    res.status(500).json({ success: false, message: error.message });
+  }
 };

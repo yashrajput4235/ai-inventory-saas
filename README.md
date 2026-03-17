@@ -141,7 +141,7 @@ System triggers:
 Demo Link:
 
 ```
-https://ai-inventory-saas-hd6iait1c-yashrajput4235s-projects.vercel.app/
+https://ai-inventory-saas.vercel.app/auth/login
 ```
 
 Admin Login:
